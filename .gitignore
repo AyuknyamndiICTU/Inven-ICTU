@@ -1,0 +1,38 @@
+# Dependencies & build output
+node_modules/
+dist/
+build/
+out/
+.turbo/
+.next/
+.expo/
+coverage/
+*.tsbuildinfo
+
+# Environment & secrets (keep only the examples)
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.keystore
+*.jks
+
+# Logs & OS / editor noise
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local media & tool scratch (reference videos stay local, never committed)
+*.mp4
+.playwright-mcp/
+
+# Hardware spikes (S01): build output and the local UID pepper
+spikes/**/build/
+spikes/**/.pepper
