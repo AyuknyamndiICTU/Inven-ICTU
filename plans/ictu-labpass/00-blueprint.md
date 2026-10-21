@@ -221,7 +221,7 @@ Every mutation adds a changelog row naming the trigger (e.g. an S01 finding) and
 | 2026-10-19 | v1.1 — Fixed the 14 major findings (list below) | Same review |
 | 2026-10-19 | v1.1 — Fixed the 4 minor findings: UID survey aggregate/HMAC only; risk IDs renamed `RSK-xx` (they clashed with kiosk screens K1–K10); separate HCE metrics; invariants gained "enforced from" | Same review |
 | 2026-10-20 | S00 done: repository created, commit `9e2e776`, tag `labpass/s00`, worktrees `labpass-s01` and `labpass-s02` | Phase 0 |
-| 2026-10-20 | **v1.2** — Inserted **S06.5** (DESFire EV3 card authentication); Q1 now asks for card specification + UID file from the supplier; S01 card survey uses blank DESFire samples | Decision Q1: no NFC cards yet; DESFire EV3 chosen |
+| 2026-10-20 | **v1.2** — Inserted **S06.5** (DESFire EV3 card authentication); Q1 now asks for card specification + UID file from the supplier; S01 card task validates blank DESFire samples instead of surveying existing cards | Decision Q1: no NFC cards yet; DESFire EV3 chosen |
 | 2026-10-20 | v1.2 — Inserted **S11.5** (kiosk offline mode + sync, ARCH §5 F9); added R13; S13 depends on S06.5 and S11.5; estimate 17–21 weeks | Decision Q6: offline loans required |
 | 2026-10-20 | v1.2 — `maxItemsPerStudent` unlimited; D1/D2 confirmed; new question Q13 (public reachability); new risks RSK-13 to RSK-15 | Decisions Q4, Q7, Q9, D1, D2 |
 

@@ -44,7 +44,7 @@ Status: ⬜ Not started · 🟨 In progress · ✅ Completed · ⛔ Blocked
 | 6 · Launch | [M11 Production, pilot & go-live](#m11--production-pilot--go-live-s14) | S14 | W18–W21 | 0 / 16 | ⬜ |
 | | **Total** | 18 steps | ~21 weeks | **14 / 193** | |
 
-\* Indicative, for a team of 3–4 developers. Phases 2 and 3 run in parallel, and so do M7–M9. Refine the dates after M1.
+\* Indicative, for a team of 3–4 developers. Phases 2 and 3 run in parallel, and so do M7–M9. The kiosk (M8) runs 2 weeks longer than in v1.1 because of offline mode and DESFire. Refine the dates after M1.
 
 ---
 
@@ -230,7 +230,7 @@ Owner: — · Started: — · Completed: —
 
 ---
 
-## Phase 4 — Product surfaces (Weeks 9–14)
+## Phase 4 — Product surfaces (Weeks 9–15)
 
 ### M7 · Admin console (S09, S10)
 Owner: — · Started: — · Completed: —
