@@ -10,7 +10,7 @@
 |---|---|
 | Status | **v1.2 — Phase 0 decisions applied** (see changelog and the decision log) · 2026-10-20 |
 | Stack | TypeScript end-to-end: NestJS + PostgreSQL · Next.js admin · Electron kiosk · Expo (React Native) mobile |
-| Mode | **Direct mode**: no repo or GitHub CLI exists yet. S00 creates the repo; each step ends with a local merge + tag `labpass/sNN`. Parallel steps use `git worktree`. Once a GitHub remote exists, switch to branch-per-step + PR + CI (`ci.yml` is created in S02). |
+| Mode | **GitHub mode** (since 2026-10-21): the remote is `origin` = <https://github.com/AyuknyamndiICTU/Inven-ICTU>. Each step runs on its own branch (`s01`, `s02`, … created as worktrees), which is pushed and merged into `main` through a **pull request** after review, then tagged `labpass/sNN`. CI (`ci.yml`) is created in S02. GitHub CLI is not installed, so open PRs in the browser or with GitKraken. |
 | Shape | **18 steps in 10 waves** · 7 on the strongest model tier · critical path S00→S02→S03→S04→S06→S11→S06.5→S11.5→S13→S14 (S01 must also finish before S06) |
 
 ## Plan files
@@ -127,7 +127,7 @@ Before an invariant's "Enforced from" step, record it as *not yet applicable*.
 1. **Read** the Invariants, your step block, and only the `ARCH §`/`DESIGN §` sections it cites.
 2. **Load** the step's ECC skills (e.g. `skill: nestjs-patterns`). For UI steps, also load `frontend-design-direction`.
    The ECC `plan-orchestrate` skill can read this plan and emit a ready-to-paste command for any step.
-3. **Isolate parallel work**: `git worktree add ..\labpass-sNN -b sNN`. Merge with `git merge --no-ff sNN`, following the step's parallel-work rule.
+3. **Isolate parallel work**: `git worktree add ..\labpass-sNN -b sNN`. Push the branch and merge it into `main` through a pull request, following the step's parallel-work rule.
 4. **Deliver L steps as their PR slices.** For each slice: failing tests first (`tdd-workflow`), then implement, then run the slice's checks + `pnpm verify`.
 5. **Review**: run `verification-loop`, then a `code-review` agent on the diff (plus `security-review` for S04–S07 and S11–S13). Fix every high-confidence finding.
 6. **Record**: Conventional Commit `feat(sNN): …`, tag `labpass/sNN`. In [plan.md](./plan.md), tick the step's tasks and acceptance boxes and update the dashboard. Add a changelog row here if the plan changed.
