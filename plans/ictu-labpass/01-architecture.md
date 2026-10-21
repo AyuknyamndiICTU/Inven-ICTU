@@ -16,6 +16,8 @@
 | Kiosk challenge | A single-use, server-issued 16-byte nonce bound to one kiosk (TTL 60 s). It drives every phone-based identification. |
 | Virtual card | The student's phone credential, a hardware-backed P-256 key. Android with NFC **taps** it (HCE). Any phone (iPhone, Android without NFC) uses **Scan-the-Kiosk**: the app scans the kiosk's live challenge QR and signs it. |
 | HCE | Android Host Card Emulation — the phone answers the reader like a smart card. |
+| DESFire EV3 | The NXP MIFARE DESFire EV3 chip chosen for the new ICTU ID cards (decision Q1). It supports AES mutual authentication, so a card cannot be cloned by copying its UID. |
+| Offline mode | The kiosk keeps recording loans while the API is unreachable, then syncs them (decision Q6, ARCH §5 F9). |
 
 Open questions and decision gates are in [00-blueprint.md → Decision gates](./00-blueprint.md#decision-gates-open-questions-for-ictu).
 
@@ -86,7 +88,7 @@ Bounded contexts: **Identity** (students, cards, credentials), **Inventory** (eq
 |---|---|---|
 | `Student` | matricule (unique), firstName, lastName, email?, phone? (E.164), dateOfBirth, program, level, photoKey?, status `ACTIVE/INACTIVE/SUSPENDED`, sisExternalId, sourceHash, manualPinHash?, syncedAt | Mirrors the SIS and is never hard-deleted. `pg_trgm` index on names. Email and phone are **optional**. |
 | `DirectoryImport` / `DirectoryImportIssue` / `DirectoryImportChange` | source `FILE/REST`, counts, status, actor / row, field, message / studentId, **before jsonb**, after jsonb | Before-images allow a **compensating rollback** of a bad import. |
-| `CardBinding` | studentId, uidHmac (HMAC-SHA256 with a server pepper), cardTech, status, createdVia `SIS/OTP/ADMIN` | Raw UIDs are never stored. |
+| `CardBinding` | studentId, uidHmac (HMAC-SHA256 with a server pepper), cardTech `DESFIRE_EV3/OTHER`, keyVersion, status, createdVia `SUPPLIER_FILE/SIS/OTP/ADMIN` | Raw UIDs are never stored. |
 | `EnrollmentSession` | id, matricule, submittedFields (jsonb), matchResult (per-field), otpHash, otpAttempts, otpVerifiedAt, popNonce, expiresAt (15 min), status | Binds all enrollment phases together (F7). |
 | `MobileCredential` | id (UUID = credentialId), studentId, publicKeySpki, platform `ANDROID/IOS`, capabilities `{hce, scan}`, deviceLabel, attestation (jsonb, audit only), status `PENDING/ACTIVE/REVOKED/REJECTED`, tokenFamilyId | **Partial unique index**: one `ACTIVE` per student. |
 | `CredentialRequest` | enrollmentSessionId, credentialId, decision `AUTO_APPROVED/PENDING/APPROVED/REJECTED`, reviewerId, verifiedInPerson, reason | The admin queue. |
@@ -100,10 +102,12 @@ Bounded contexts: **Identity** (students, cards, credentials), **Inventory** (eq
 | `AlertRule` | scope (global or equipmentId), threshold, channels, recipients | |
 | `AlertOccurrence` | id, equipmentId, severity `LOW/OUT`, threshold, availableAtFire, firedAt, resolvedAt? | Its id keys notification jobs. An open occurrence means "disarmed". |
 | `NotificationLog` | occurrenceId?, channel, recipientMasked, template, status, providerMessageId, attempts, error | Delivery audit. |
-| `Setting` | typed key/value (zod) | e.g. `manualEntryPolicy`, `loanDuePolicy`, `quietHours`, `maxItemsPerStudent`, `kioskMotionLevel`, labels. |
+| `Setting` | typed key/value (zod) | e.g. `manualEntryPolicy` (`PIN_OR_ASSISTANT`), `loanDuePolicy` (lab closing time), `maxItemsPerStudent` (`null` = unlimited, decision Q4), `blockWhenOverdue` (true), `cardAuthMode` (`UID`/`DESFIRE_PREFERRED`/`DESFIRE_REQUIRED`), `offlineMaxHours` (8), `quietHours`, `kioskMotionLevel`, labels. |
 | `IdempotencyKey` | (scope, key) unique, requestHash, status `IN_PROGRESS/DONE`, responseStatus, responseBody, createdAt | Written **inside** the business transaction (F5). |
 | `OutboxEvent` / `ConsumerInbox` | id, type, payload, createdAt, publishedAt? / (consumer, eventId) unique | Exactly-once effects on top of at-least-once delivery. |
 | `AuditLog` | actor, action, entity, entityId, diff, ip, at | Append-only. |
+| `OfflineSyncBatch` / `OfflineSyncConflict` | kioskId, offlineFrom, offlineTo, txCount, status / batchId, offlineTxId, reason `INSUFFICIENT_STOCK/CREDENTIAL_REVOKED/STUDENT_INACTIVE/BUNDLE_EXPIRED`, payload, resolution, resolverId | Created by S11.5. Lines in conflict never touch stock until an admin resolves them (I2). |
+| `KioskOfflineKey` | kioskId, keyVersion, wrappedKey, createdAt | Per-kiosk key for HMAC lookups in the offline bundle. It is rotated with every bundle. |
 
 **Stock math.** `availableQuantity` changes in the same transaction as its `StockMovement`.
 Invariant: `total − available = Σ(qtyIssued − qtyReturned − qtyDamaged − qtyLost)` over all loan lines.
@@ -116,10 +120,14 @@ Damaged or lost units reduce `total` (write-off) instead of returning to `availa
 Redis stores them as `kc:{kioskId}:{nonce}` with a 60 s TTL. A challenge is consumed atomically (`GETDEL`) on use and refilled at once.
 The attract screen shows the newest one as a QR.
 
-**F1 — Physical card.** A card is detected. The kiosk tries SELECT AID first, which fails for cards. It then reads the UID
-(`FF CA 00 00 00`) and calls `POST /kiosk/identify {method:"CARD", uid}`. The API HMACs the UID and finds the `CardBinding`.
-It returns the student summary, eligibility, open loan lines and a 2-minute `kioskSession` JWT bound to kiosk + student.
-For an unknown card, the kiosk offers matricule entry and a *link this card* request (OTP to the SIS contact, or admin approval).
+**F1 — Physical card (DESFire EV3, decision Q1).**
+1. A card is detected. The kiosk tries SELECT AID first, which fails for cards. It then reads the UID (`FF CA 00 00 00`).
+2. With `cardAuthMode` set to `DESFIRE_PREFERRED` or `DESFIRE_REQUIRED`, the kiosk runs the **relayed AES authentication** in §6.
+   The API holds the keys, and the kiosk only forwards bytes between the card and the API.
+   With `UID` mode (or a non-DESFire card in `DESFIRE_PREFERRED` mode), it calls `POST /kiosk/identify {method:"CARD", uid}` directly.
+3. The API HMACs the UID, finds the `CardBinding`, and returns the student summary, eligibility, open loan lines and a 2-minute `kioskSession` JWT bound to kiosk + student.
+4. For an unknown card, the kiosk offers matricule entry and a *link this card* request (OTP to the SIS contact, or admin approval).
+   Normally, cards are already bound by the supplier's `card_uid,matricule` file (§9).
 
 **F2 — Android tap (HCE).** SELECT AID returns the credentialId. The kiosk sends SIGN with a pool challenge, its kioskId and ts.
 The phone signs natively and the kiosk posts `{method:"HCE", credentialId, nonce, ts, signature}`. The API verifies it (§6),
@@ -177,6 +185,39 @@ Admin force-return and stock adjustments use the same pattern.
 4. If `available > threshold`: resolve the open occurrence (re-arm).
 5. `available = 0` is severity OUT and bypasses quiet hours. Deliveries retry with backoff, fall through to a dead-letter queue, and are recorded in `NotificationLog`.
 
+**F9 — Offline mode (decision Q6).**
+
+*Entering offline mode.* The kiosk switches to offline mode when the API has been unreachable for 10 s, or the socket has dropped and two retries have failed.
+It shows an amber "Offline — loans will sync" capsule. While online, the kiosk refreshes an encrypted **offline bundle** every 5 minutes
+(`GET /kiosk/offline-bundle`). The bundle contains:
+- equipment and an availability snapshot;
+- card bindings as `HMAC(KioskOfflineKey, uid)`;
+- minimal summaries for students with a card or credential: name, matricule, photo thumbnail, status, overdue flag;
+- ACTIVE credential SPKIs;
+- argon2 hashes of the **lab-assistant** PINs.
+
+The bundle is stored in an encrypted local SQLite file, whose key is wrapped with `safeStorage`.
+
+*Identifying students offline:*
+- **CARD**: UID lookup only. Offline DESFire authentication is impossible, because the keys stay on the server. The loan is flagged.
+- **HCE**: the kiosk generates its own nonces and verifies signatures locally against the cached SPKIs.
+- **SCAN**: only through the `LPR1` response QR, read by the webcam and verified locally.
+- **MANUAL**: lab-assistant confirmation only. Student PIN hashes are never cached on the kiosk.
+
+*Transactions.* Each offline borrow or return is written to a local journal with:
+- a UUID idempotency key, `occurredAt` and a monotonic sequence number;
+- the identify method, plus the evidence needed to re-verify it (signature, nonce, ts).
+
+Local availability is decremented, and a borrow cannot exceed the local snapshot.
+After `offlineMaxHours` (default 8 h) the kiosk becomes read-only, and only the assistant can extend this.
+
+*Sync.* On reconnect, `POST /kiosk/offline-sync` replays the journal in sequence order.
+- Each transaction goes through the normal F5/F6 transaction with `offline=true`, using the same idempotency keys, so a replay is safe.
+- The server **re-verifies** HCE and SCAN evidence and records `occurredAt`.
+- Conflicts become `OfflineSyncConflict` rows with the line in `NEEDS_REVIEW`. Possible causes: insufficient stock after changes made elsewhere, a credential revoked during the outage, or an inactive student.
+- Stock is only changed for a conflicting line once an admin resolves it, so I2 always holds.
+- Any conflict raises an admin alert.
+
 ## §6 ICTU Tap Protocol v1 (summary of the normative spec)
 
 **Encodings (all transports).**
@@ -213,9 +254,22 @@ The key uses `setUnlockedDeviceRequired(true)`. It tries StrongBox and falls bac
 bad DER, padding in base64url, wrong prefix/version, expired/consumed/foreign nonce, revoked credential.
 They are shared by the API, the kiosk `FakeReader`, and the Kotlin/Swift tests.
 
-**Physical cards.** UID identification is clonable on MIFARE Classic. That is acceptable for an audited lab-loan log
-(the photo is shown at every identification). If cards are DESFire EV2/EV3 and the issuer shares an application key, add mutual
-authentication as a new `identify` method (ADR-0003). If cards use random UIDs, UID binding does not work — resolve this in S01.
+**Physical cards — MIFARE DESFire EV3 (decision Q1; normative spec `docs/protocols/card-personalisation-v1.md`, written in S01).**
+
+*Personalisation (by the supplier):*
+- Chip: DESFire EV3, ≥ 2 KB. **Random UID disabled**, so the 7-byte UID is stable and matches the supplier's `card_uid,matricule` file.
+- PICC master key changed from the factory default and held by ICTU.
+- One LabPass application (3-byte AID, proposed `0x4C5031`; confirmed in S01) with AES-128 keys.
+- **Per-card keys** are derived from an ICTU master key using the card UID (NXP AN10922).
+- Keys are injected in a key ceremony. The supplier does not keep them (RSK-13).
+
+*Relayed authentication (S06.5):*
+- The kiosk calls `POST /kiosk/card-auth/start {uid}`, and the API derives the card key. Keys never leave the server.
+- The kiosk then relays `AuthenticateEV2First` between the card and the API (`POST /kiosk/card-auth/step`). The API verifies the card's response and returns the identity.
+- This adds 2 LAN round trips and must still meet the 800 ms budget (measured in S01).
+
+*Fallback:* UID-only identification is used offline (F9), for non-DESFire cards when `cardAuthMode=DESFIRE_PREFERRED`, and before the cards are delivered.
+UID-only identification is clonable, which is acceptable because the photo is shown at every identification and loans are audited.
 
 ## §7 Security, privacy & roles
 
@@ -259,7 +313,8 @@ authentication as a new `identify` method (ADR-0003). If cards use random UIDs, 
 | Auth | `POST /auth/login`, `/auth/totp`, `/auth/logout`, `GET /auth/me` |
 | Settings | `GET/PUT /settings` (admin), `GET /kiosk/config` (kiosk); event `SettingsChanged` → `/kiosk` socket |
 | Kiosks | `POST /kiosks` (admin → code), `POST /kiosks/register` (code → token), `POST /kiosks/heartbeat`, `POST /kiosk/challenges` |
-| Identify | `POST /kiosk/identify` {CARD · HCE · SCAN · MANUAL}, `POST /kiosk/manual/verify` {PIN · OTP · ASSISTANT}; socket `identified` (from `/me/scan`) |
+| Identify | `POST /kiosk/identify` {CARD · HCE · SCAN · MANUAL}, `POST /kiosk/card-auth/start` + `/kiosk/card-auth/step` (DESFire relay), `POST /kiosk/manual/verify` {PIN · OTP · ASSISTANT}; socket `identified` (from `/me/scan`) |
+| Offline | `GET /kiosk/offline-bundle`, `POST /kiosk/offline-sync`; admin `GET /offline-conflicts`, `POST /offline-conflicts/{id}/resolve` |
 | Loans | `POST /kiosk/sign-in`, `POST /kiosk/sign-out` (Idempotency-Key), `GET /loans`, `POST /loans/{id}/force-return` |
 | Equipment | CRUD `/equipment`, `/categories`; `POST /equipment/{id}/adjust`; `GET /equipment/{id}/movements` |
 | Students | `GET /students`, `GET /students/{id}`; `POST /directory/imports` → preview, `…/{id}/commit`, `…/{id}/rollback`; connector config / test / sync; card bind/unbind, link requests |
@@ -276,6 +331,11 @@ Template columns. EN/FR header aliases are auto-mapped, and a mapping UI allows 
 - **Optional:** `email`, `phone`, `program` (filière), `level` (niveau), `status`, `card_uid` (creates a CardBinding), `photo_url`.
 
 Auto-approval needs at least one SIS contact (email or phone) for the OTP. Students with no contact always go to admin review.
+
+**Card batch import (decision Q1).** For each batch of printed cards, the supplier delivers a `card_uid,matricule` file (7-byte UID as hex).
+It is uploaded as a separate import type, **card batch**, through the same pipeline: dry run, then commit, with rollback available.
+Each row creates a `CardBinding` with `createdVia=SUPPLIER_FILE`. If a student already has a card, the old binding is revoked.
+Problem rows go to the error report: unknown matricules, duplicate UIDs, and UIDs already bound to another student.
 
 **Pipeline**
 1. Upload, then parse: CSV via streaming papaparse with **delimiter auto-detect** (French Excel uses `;`) and BOM stripping; XLSX via the exceljs streaming reader.

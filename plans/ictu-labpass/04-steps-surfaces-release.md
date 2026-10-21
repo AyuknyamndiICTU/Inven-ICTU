@@ -159,7 +159,7 @@ It builds on the S09 shell.
    - per-admin channel toggles with **number verification by OTP**;
    - quiet hours, digest window, **Send test** per channel, delivery log.
 6. **Settings**:
-   - Sign In/Out labels (EN/FR); manual-entry policy (default `PIN_OR_ASSISTANT`; choosing `OPEN` shows a risk warning and needs SUPER_ADMIN); loan-due policy; max items; overdue block;
+   - Sign In/Out labels (EN/FR); manual-entry policy (default `PIN_OR_ASSISTANT`; choosing `OPEN` shows a risk warning and needs SUPER_ADMIN); loan-due policy (default: lab closing time); max items (default: unlimited, decision Q4); overdue block (default on);
    - kiosk timeout and `motionLevel`; assistant PINs; retention; `minSupportedVersion`.
 7. **Users & roles**, **Audit log**, **Reports** (charts + audited export).
 
@@ -225,7 +225,7 @@ Rules for this step:
    - K7: matricule → name + photo → PIN/OTP/assistant.
    - K8: link card.
    - aria-live greeting, EN/FR, optional sound cues.
-8. **Degraded mode**: API unreachable or reader missing → K9 with the next step. **No offline transactions in v1** (Q6).
+8. **Degraded mode**: if the reader is missing → K9 with the next step. If the API is unreachable → the **offline mode** delivered in S11.5 (decision Q6). Until S11.5 merges, show K9.
 9. **Packaging & updates**: electron-builder NSIS for the S01 OS.
    - **Production auto-update only with Authenticode-signed builds** from an HTTPS, allow-listed, versioned feed with signature verification (Q12).
    - Without signing, auto-update is disabled and a manual-update runbook is used.
@@ -253,6 +253,65 @@ The e2e scenarios cover:
 - [ ] The finish gate passes at `1920x1080` and `1366x768`. Electronegativity has no high findings.
 
 **Rollback.** Keep the previous signed installer. Kiosks update only from a **promoted** channel, so rolling back means promoting the prior build.
+
+---
+
+## S11.5 · Kiosk offline mode (inserted by decision Q6)
+
+| Depends on | Parallel with | Tier | Size | Touches |
+|---|---|---|---|---|
+| S11, S06.5 | S10, S12 | default | M | `apps/kiosk/main/offline`, `apps/api/src/offline`, `apps/admin` (conflicts page), `packages/contracts` |
+
+**ECC skills:** `backend-patterns` · `error-handling` · `security-review` · `tdd-workflow` · `e2e-testing`
+**Agents:** Copilot `general-purpose` · ECC `v3/security-architect` (data cached on the kiosk) · ECC `v3/pii-detector`
+
+**PR slices:** (a) tasks 1–2 · (b) 3–4 · (c) 5–6.
+
+**Context brief.** ICTU requires the kiosk to **keep recording loans when the network or the on-campus server is down**, and to sync them later (decision Q6).
+ARCH §5 F9 defines exactly what is cached, how students are identified offline, the journal, and the sync and conflict rules.
+Two rules must hold. First, **I2 must never break**: conflicts go to admin review instead of forcing stock. Second, offline replays reuse the
+same idempotency keys, so a sync can be retried any number of times safely.
+
+**Tasks**
+1. **API: offline bundle** (`GET /kiosk/offline-bundle`):
+   - Contents: equipment and availability; card bindings as `HMAC(KioskOfflineKey, uid)`; minimal student summaries; ACTIVE credential SPKIs; assistant PIN hashes.
+   - Signed by the server, versioned, with `KioskOfflineKey` rotated on each bundle.
+   - Size budget ≤ 5 MB for 10k students (photo thumbnails ≤ 8 KB).
+2. **Kiosk: offline store**:
+   - Encrypted SQLite (SQLCipher, or AES-GCM rows), with its key wrapped by `safeStorage`.
+   - Bundle refreshed every 5 minutes; staleness tracked; the store is wiped when the kiosk is revoked.
+3. **Kiosk: offline engine**:
+   - Online/offline detection with hysteresis.
+   - Local identification: CARD by UID, HCE with kiosk-generated nonces, SCAN by `LPR1` + webcam, MANUAL by assistant only.
+   - A local journal (UUID, `occurredAt`, sequence, evidence) and local availability.
+   - The `offlineMaxHours` read-only lock, which an assistant can extend.
+   - UI: amber offline capsule (DESIGN K9 variant), an offline badge on receipts, and a pending-sync counter.
+4. **API: sync** (`POST /kiosk/offline-sync`):
+   - Replays in order through the F5/F6 services with `offline=true` and `occurredAt`.
+   - Re-verifies HCE/SCAN evidence. Creates the `OfflineSyncBatch` and `OfflineSyncConflict` rows.
+   - Emits an admin alert when there are conflicts.
+5. **Admin**: an **Offline sync conflicts** page that lists conflicts with their evidence. Resolving one (accept with a stock correction, or void with a reason) is audited.
+6. **Contract and docs**: OpenAPI additions (I3); runbook `docs/runbooks/kiosk-offline.md`.
+
+**Verify**
+```powershell
+pnpm --filter api test -- offline              # sync replay idempotency, conflict cases, I2 preserved
+pnpm --filter kiosk test:e2e -- offline        # see scenario below
+pnpm --filter kiosk soak -- --offline --hours 8
+pnpm ops:reconcile
+```
+The kiosk e2e scenario: cut the API → 20 offline borrows and returns (card, HCE, scan, assistant) → restore → sync → 0 drift.
+Then repeat the sync to prove that replaying it changes nothing.
+
+**Exit criteria**
+- [ ] The offline → sync round trip passes with 0 drift, and replaying a sync is a no-op.
+- [ ] Conflicts (stock changed elsewhere, credential revoked, student inactive) land in admin review and never break I2.
+- [ ] The read-only lock works after `offlineMaxHours`. The `pii-detector` review of the kiosk cache is clean, and the cache is encrypted at rest.
+
+**Rollback.**
+1. Set `offlineMaxHours=0` to disable offline mode (the kiosk then shows K9).
+2. Sync any pending journal first.
+3. Revert by slice.
 
 ---
 
@@ -328,7 +387,7 @@ Hardware checks:
 
 | Depends on | Parallel with | Tier | Size | Touches |
 |---|---|---|---|---|
-| S07, S09, S10, S11, S12 | — | **strongest** (review) | M | all; `docs/security`, `docs/evidence` |
+| S07, S09, S10, S11, S12, S06.5, S11.5 | — | **strongest** (review) | M | all; `docs/security`, `docs/evidence` |
 
 **ECC skills:** `security-review` · `security-scan` · `e2e-testing` · `browser-qa` · `click-path-audit` · `verification-loop` · `benchmark` · `production-audit` · `accessibility` · `ai-regression-testing`
 **Agents:** Copilot `security-review` · ECC `v3/security-architect` · `v3/pii-detector` · `testing/production-validator` · `v3/performance-engineer` · Copilot `code-review`
@@ -339,7 +398,8 @@ Run the DESIGN §8 finish gate for every surface and exercise every DESIGN §6 s
 **Tasks**
 1. **STRIDE threat model** (`docs/security/threat-model.md`) with an **attack test per threat**:
    - replayed or foreign-kiosk challenge; response-QR screenshot replay;
-   - manual-matricule enumeration and PIN brute force; cloned UID card;
+   - manual-matricule enumeration and PIN brute force; cloned UID card vs DESFire authentication; DESFire relay replay; key leakage;
+   - theft of the kiosk offline cache; offline replay or tampered journal;
    - token theft from the kiosk renderer; tampered update feed;
    - admin takeover; import bombs and CSV injection; SSRF via the SIS URL; webhook spoofing; enrollment races.
 
@@ -351,6 +411,7 @@ Run the DESIGN §8 finish gate for every surface and exercise every DESIGN §6 s
 4. **Load test** (k6): 300 identify + borrow per minute for 15 minutes. p95 < 300 ms, no 5xx, pool sizing documented.
 5. **Chaos**:
    - Kill Redis/API mid-borrow → no drift; idempotent retry is safe.
+   - Take the server down during lab hours → the kiosk goes offline, keeps lending, then syncs with 0 drift. Repeat the sync to prove replay is safe.
    - Unplug the reader mid-tap → K9, then recovery.
    - Provider outage → retries, then DLQ, with no duplicates.
 6. **Finish gates** for ui-kit, admin, kiosk and mobile; `click-path-audit` on the kiosk and admin.
@@ -396,7 +457,10 @@ Pass the **real-channel gate**, then run a **two-week pilot** with one class.
    - Reader driver; the signed NSIS build, or the manual-update runbook if Q12 is unresolved; device registration.
    - A restricted Windows account with auto-login and auto-start (Shell Launcher on Enterprise/Education); no sleep; update hours outside lab time.
 6. **Mobile release**: pilot APK → Play staged rollout; TestFlight → App Store. This needs ICTU **organisation** accounts (Q10).
-7. **Real data** with the Registry: SIS import as a dry run first, then commit (with rollback available). Card binding by import, or a start-of-term link drive.
+7. **Real data** with the Registry:
+   - SIS import as a dry run first, then commit (with rollback available).
+   - **Card batch import** of the supplier's `card_uid,matricule` file. Run the supplier acceptance test on the first batch.
+   - DESFire key ceremony + escrow (ADR-0008), then set `cardAuthMode=DESFIRE_PREFERRED`.
 8. **Pilot** (2 weeks):
    - KPIs: tap success ≥ 98 %, median borrow ≤ 20 s, alert delivery ≥ 99 %, nightly `ops:reconcile` = 0.
    - Weekly fix releases, with `canary-watch` after each.

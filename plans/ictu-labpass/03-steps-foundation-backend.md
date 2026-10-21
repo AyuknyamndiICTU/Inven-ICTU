@@ -48,19 +48,26 @@ git worktree list   # main + s01 + s02
 **Agents:** Copilot `research` (vendor docs, part availability) · ECC `core/planner` (feeds results back into the plan)
 
 **Context brief.** Five assumptions decide the design, and none is verified yet:
-(a) ICTU cards expose a **stable UID** over PC/SC.
+(a) **DESFire EV3** cards (decision Q1) can be personalised as specified, and relayed AES authentication works over PC/SC within budget. ICTU cards have no NFC chip yet, so this uses **blank sample cards**.
+
 (b) Android **HCE with a real Keystore key** answers our reader fast enough (ARCH §2 note on `HostApduService`, §6).
 (c) A PC/SC binding builds for **current Electron** on the lab PC's OS (ARCH §2).
 (d) A phone camera reads a QR from the **lab monitor** reliably, and the webcam reads a QR off a phone (ARCH §5 F3).
 (e) The **SIS** can supply students through an API or an export (ARCH §9).
 
-Procure on day 1: 2× ACS ACR1252U (one spare), 1× 1080p USB webcam, and test phones (one NFC Android 10+, one budget Tecno/Infinix, one iPhone).
-A USB 2D scanner is optional.
+Procure on day 1:
+- 2× ACS ACR1252U (one spare) and 1× 1080p USB webcam.
+- **20 blank MIFARE DESFire EV3 (≥ 2 KB) sample cards**.
+- Test phones: one NFC Android 10+, one budget Tecno/Infinix, one iPhone.
+- A USB 2D scanner is optional.
 
 **Tasks**
-1. **Card survey.** Read the ATR and UID of at least 20 real ICTU cards, 3 times each. Classify the chip.
-   Commit **aggregate results only**: chip type, UID length, stable yes/no, last 2 bytes redacted.
-   If per-card rows are needed, use `HMAC(spike pepper, uid)` with the pepper kept in an ignored `.pepper` file.
+1. **Card specification + sample validation** (decision Q1).
+   - Write `docs/protocols/card-personalisation-v1.md` from ARCH §6 "Physical cards". It covers chip and memory, random UID **off**, the PICC key policy, the application AID and key settings, AN10922 key diversification, the key-ceremony procedure, and the **`card_uid,matricule` delivery file format** (CSV, UTF-8, UID as 14 hex chars).
+   - **Send the spec to the card supplier through ICTU** as early as possible, because cards are already being produced.
+   - Personalise 10 blank samples with a throwaway test master key. Verify the stable UID, relayed `AuthenticateEV2First` over PC/SC (latency p95), and failure cases (wrong key, removing the card mid-auth).
+   - Commit **aggregate results only**. If per-card rows are needed, use `HMAC(spike pepper, uid)` with the pepper kept in an ignored `.pepper` file.
+   - When supplier samples arrive, run the same checks as the **supplier acceptance test** (`docs/spikes/S01-card-acceptance.md`).
 2. **PC/SC binding.** In `spikes/reader-node/`, run `nfc-pcsc` under Node LTS **and** inside an Electron `utilityProcess` on the lab PC's OS.
    If it fails, evaluate a maintained fork and a sidecar binary (Rust `pcsc` crate or .NET PCSC) speaking JSON lines over stdio. Record the result in **ADR-0002**.
 3. **HCE with the real crypto path.** In `spikes/hce-android/`, write a Kotlin `HostApduService` implementing ARCH §6 SELECT/SIGN.
@@ -74,7 +81,7 @@ A USB 2D scanner is optional.
 5. **Lab PC audit.** Record OS edition, CPU, GPU, RAM, display, USB ports, wired network, admin rights, and the `detect-gpu` tier.
 6. **SIS discovery** (with Registry/IT). Record the system's name, API docs or an **anonymised** sample, available fields (DOB? phone? email? photo? card UID?) and update frequency.
    Write `docs/spikes/S01-sis.md`.
-7. **ADRs:** 0001 reader hardware · 0002 PC/SC binding · 0003 card identification (UID / DESFire / unsupported) · 0004 SIS integration mode.
+7. **ADRs:** 0001 reader hardware · 0002 PC/SC binding · 0003 card identification (DESFire EV3 with relayed authentication, decision Q1) · 0004 SIS integration mode · 0008 DESFire key custody (who holds the master key and how it is escrowed).
 8. **Freeze Tap Protocol v1.** Validate S03's draft `docs/protocols/tap-protocol-v1.md` and `vectors.json` on real hardware.
    Apply any fixes, then mark the spec **FROZEN**.
    Then update the blueprint decision gates (Q1, Q2, Q8) and add a changelog row.
@@ -286,7 +293,7 @@ Whichever of S05/S06 merges **second** rebases and regenerates its migration (`p
    - error-report CSV via `toSafeCsv()`; template file.
 3. **Scheduled REST sync** (BullMQ repeatable) plus `test-connection` and `sync-now`.
 4. **Students API**: trigram search and a role-scoped profile.
-   **Card binding**: `uidHmac`; admin bind/unbind; import `card_uid`; kiosk **link request** (unknown UID + matricule → OTP to SIS contact, or admin queue).
+   **Card binding**: `uidHmac`; admin bind/unbind; import `card_uid`; **card batch import** of the supplier's `card_uid,matricule` file (ARCH §9); kiosk **link request** (unknown UID + matricule → OTP to SIS contact, or admin queue).
 5. **Manual-entry PIN**: `POST /me/pin` (argon2; requires a session younger than 5 min) and admin/assistant reset. Used by S06 F4.
 6. **Enrollment** (ARCH §5 F7 exactly):
    - `EnrollmentSession` binds all phases; `normalizeName`; OTP hashed, 5 attempts, invalidated after use.
@@ -376,6 +383,51 @@ pnpm --filter api bench:identify     # server p95 < 150 ms on seed data
 - [ ] `ops:reconcile` = 0 drift after the property run. Manual entry without verification cannot reach sign-in.
 
 **Rollback.** Revert by slice. The ledger is append-only, so data fixes are compensating movements.
+
+---
+
+## S06.5 · DESFire EV3 card authentication (inserted by decision Q1)
+
+| Depends on | Parallel with | Tier | Size | Touches |
+|---|---|---|---|---|
+| S06, S01 (card spec, ADR-0003/0008), S11 slice (a) | S10, S11 later slices, S12 | **strongest** | M | `apps/api/src/cards/desfire`, `apps/kiosk/main/reader`, `packages/contracts` |
+
+**ECC skills:** `security-review` · `tdd-workflow` · `hexagonal-architecture` · `error-handling`
+**Agents:** ECC `v3/security-architect` · `testing/tdd-london-swarm` · Copilot `rubber-duck` (crypto review)
+
+**Context brief.** The new ICTU ID cards will be **MIFARE DESFire EV3**, personalised to `docs/protocols/card-personalisation-v1.md` (S01).
+UID-only identification can be cloned. This step adds **AES mutual authentication**, with the keys kept on the server: the kiosk only relays bytes
+(ARCH §5 F1, §6 "Physical cards"). UID mode stays as the fallback (`cardAuthMode`), and offline mode (S11.5) always uses UID mode.
+
+**Tasks**
+1. **Key service** (port `CardKeyStore`):
+   - The master key is loaded from a Docker secret, or an HSM/SAM later.
+   - Per-card keys are derived with AN10922 (AES-CMAC) from the UID.
+   - Keys are versioned (`CardBinding.keyVersion`). Key material is never logged, returned, or sent to the kiosk.
+2. **Relay endpoints**: `POST /kiosk/card-auth/start {uid}` → `{sessionId, cmd}`, then `POST /kiosk/card-auth/step {sessionId, cardResponse}` → `{cmd}` or the identify result.
+   - Auth sessions are stored in Redis (TTL 5 s, single use, bound to the kiosk).
+   - The API implements `AuthenticateEV2First` (AES) and checks the card's `RndA'` before trusting the UID.
+   - Add both endpoints to the OpenAPI contract (I3).
+3. **Kiosk**: the `ReaderDriver` gains `transceive(apdu)` for DESFire native commands wrapped in ISO 7816 APDUs. `DesfireRelay` in the main process loops start → step until done.
+   On failure, it follows `cardAuthMode`:
+   - `DESFIRE_REQUIRED` → error E1 with a next action;
+   - `DESFIRE_PREFERRED` → fall back to UID, and flag the loan.
+4. **Test vectors**: use the NXP AN10922 and `AuthenticateEV2First` examples, plus a FakeCard simulator for kiosk and API tests.
+   Cover a wrong key, a replayed step, a timed-out session, a foreign kiosk, and removing the card mid-auth.
+5. **Admin**: show `cardAuthMode` in Settings, and show the per-card key version and an authentication-failure count on the student profile.
+
+**Verify**
+```powershell
+pnpm --filter api test -- desfire           # AN10922 + EV2First vectors, failure cases
+pnpm --filter kiosk test:e2e -- desfire     # FakeCard relay end-to-end
+pnpm --filter kiosk hw:tap -- --mode desfire --count 50   # real sample cards: success ≥ 99 %, tap→student p95 ≤ 800 ms
+```
+
+**Exit criteria**
+- [ ] All vectors and failure cases pass. Keys never appear in logs, responses or the kiosk (I4 test).
+- [ ] The hardware run with S01 sample cards meets its budget. The crypto review leaves no high findings open.
+
+**Rollback.** Set `cardAuthMode=UID`; the cards keep working by UID. Revert the commit.
 
 ---
 

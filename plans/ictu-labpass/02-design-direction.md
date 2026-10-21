@@ -107,8 +107,10 @@ open loans with due status, and two large actions **Sign In** / **Sign Out**) ·
 grouped by category with image, live availability and a quantity stepper → fanned cart (A4) → confirm · K5 Sign Out:
 the student's open loan lines only, with qty and condition OK/Damaged · K6 Success (A6, receipt, auto-reset) ·
 K7 Manual matricule (on-screen keypad plus the physical keyboard → name + photo → PIN, OTP or assistant confirmation according to policy, ARCH §5 F4) · K8 Unknown card → link
-card · K9 Blocking states (reader unplugged, API unreachable, student inactive/suspended, out of stock,
-overdue block) · K10 Assistant overlay (PIN), which reaches the hidden kiosk settings. Inactivity timeout: 45 s → K1.
+card · K9 Blocking states (reader unplugged, student inactive/suspended, out of stock, overdue block, offline read-only lock).
+The **K9-offline** variant is not blocking: when the API is unreachable, an amber "Offline — loans will sync" capsule replaces the status capsule,
+the orb's slit turns amber, a pending-sync counter is shown, and manual entry asks for assistant confirmation (ARCH §5 F9).
+K10 Assistant overlay (PIN), which reaches the hidden kiosk settings. Inactivity timeout: 45 s → K1.
 
 **Admin** — Login + TOTP (A9, A10) · Dashboard: KPI counters (items out, overdue, low stock, active students today),
 Stock Skyline (A5), live activity feed, low-stock list, kiosk status · Inventory: table (TanStack) with category chips,
@@ -131,7 +133,7 @@ for the kiosk webcam. Other screens: My loans (due countdown) · History · Prof
 | Loading | A2 sweep plus the card skeleton; tap again is ignored for 1.5 s | Skeleton shimmer with stable table geometry | Skeleton Pass card |
 | Empty | "No open loans — nothing to return" with a Sign In shortcut | Grid-paper empty state with a primary action (e.g. "Add first equipment") | "No loans yet" |
 | Error | E1 plus a specific message and next action (retry / use matricule / call assistant) | Inline problem+json message with a field highlight and retry | Retry; offline banner |
-| Partial | The student is shown but loan history failed: banner "History unavailable", actions still allowed | Widgets fail independently, each with its own retry | Cached Pass shown, plus "Last synced …" |
+| Partial | The student is shown but loan history failed: banner "History unavailable", actions still allowed. **Offline mode**: amber capsule, receipts marked "Offline — will sync" | Widgets fail independently, each with its own retry | Cached Pass shown, plus "Last synced …" |
 | Success | A6 plus a receipt; screen resets | Toast with **Undo** for stock adjustments within 10 s | Haptic plus a ring pulse |
 | Permission | Student SUSPENDED/INACTIVE → explanation and "See lab assistant" | Role-gated pages show a lock screen naming the required role | Credential revoked → re-enroll flow |
 
