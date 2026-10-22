@@ -30,19 +30,19 @@ Status: ⬜ Not started · 🟨 In progress · ✅ Completed · ⛔ Blocked
 
 | Phase | Milestone | Steps | Target weeks* | Done | Status |
 |---|---|---|---|---|---|
-| 0 · Kickoff | [M0 Project kicked off](#m0--project-kicked-off) | S00 + decisions | W1 | 14 / 26 | 🟨 |
-| 1 · De-risk & foundation | [M1 Hardware de-risked, protocol frozen](#m1--hardware-de-risked--tap-protocol-frozen-s01) | S01 | W1–W4 | 0 / 13 | ⬜ |
+| 0 · Kickoff | [M0 Project kicked off](#m0--project-kicked-off) | S00 + decisions | W1 | 20 / 28 | 🟨 |
+| 1 · De-risk & foundation | [M1 Hardware de-risked, protocol frozen](#m1--hardware-de-risked--tap-protocol-frozen-s01) | S01 | W1–W4 | 0 / 14 | ⬜ |
 | | [M2 Foundation ready](#m2--foundation-ready-s02) | S02 | W1–W2 | 0 / 10 | ⬜ |
 | 2 · Core backend | [M3 Contract & platform](#m3--contract--platform-s03-s04) | S03, S04 | W3–W5 | 0 / 21 | ⬜ |
 | | [M4 Identity & lending engine](#m4--identity--lending-engine-s05--s06) | S05, S06 | W6–W8 | 0 / 21 | ⬜ |
 | | [M5 Low-stock alerts](#m5--low-stock-alerts-dev-verified-s07) | S07 | W9–W10 | 0 / 11 | ⬜ |
-| 3 · Design system | [M6 UI kit & signature theatre](#m6--ui-kit--signature-theatre-s08a-s08b) | S08a, S08b | W3–W7 | 0 / 12 | ⬜ |
+| 3 · Design system | [M6 UI kit & signature theatre](#m6--ui-kit--signature-theatre-s08a-s08b) | S08a, S08b | W3–W7 | 0 / 13 | ⬜ |
 | 4 · Product surfaces | [M7 Admin console](#m7--admin-console-s09-s10) | S09, S10 | W9–W13 | 0 / 16 | ⬜ |
 | | [M8 Kiosk app](#m8--kiosk-app-s11-s065-s115) | S11, S06.5, S11.5 | W9–W15 | 0 / 28 | ⬜ |
-| | [M9 Student mobile app](#m9--student-mobile-app-s12) | S12 | W9–W13 | 0 / 9 | ⬜ |
+| | [M9 Student app: web + Android](#m9--student-app-web-app--android-nfc-app-s12) | S12 | W9–W13 | 0 / 11 | ⬜ |
 | 5 · Hardening | [M10 Release candidate](#m10--release-candidate-s13) | S13 | W16–W17 | 0 / 10 | ⬜ |
-| 6 · Launch | [M11 Production, pilot & go-live](#m11--production-pilot--go-live-s14) | S14 | W18–W21 | 0 / 16 | ⬜ |
-| | **Total** | 18 steps | ~21 weeks | **14 / 193** | |
+| 6 · Launch | [M11 Production, pilot & go-live](#m11--production-pilot--go-live-s14) | S14 | W18–W21 | 0 / 19 | ⬜ |
+| | **Total** | 18 steps | ~21 weeks | **20 / 202** | |
 
 \* Indicative, for a team of 3–4 developers. Phases 2 and 3 run in parallel, and so do M7–M9. The kiosk (M8) runs 2 weeks longer than in v1.1 because of offline mode and DESFire. Refine the dates after M1.
 
@@ -67,18 +67,20 @@ Owner: AyuknyamndiICTU · Started: 2026-10-20 · Completed: —
 - [x] Q5 — WhatsApp: **ICTU creates/verifies a Meta Business account with a dedicated number**. SMS provider → chosen in **M5**
 - [x] Q6 — Offline loans: **required** → S11.5 added (+~2 weeks)
 - [x] Q7 — Hosting: **on-campus server managed by ICTU IT** (public access → Q13)
-- [ ] Q8 — Lab PC OS edition and specs; number of kiosks *(by S01)*
+- [x] Q8 — Lab PC: **one kiosk PC in the Cisco lab, Windows 10/11** (specs and GPU audited in M1)
 - [x] Q9 — Manual-entry policy: **`PIN_OR_ASSISTANT`**
-- [ ] Q10 — Apple and Google organisation developer accounts *(by S12 / S14)*
-- [ ] Q11 — Brand assets; data-protection approval *(branding by S08a, approval before real data)*
-- [ ] Q12 — Code-signing certificate for the kiosk installer *(by S14)*
-- [ ] Q13 — Can the on-campus server be reached from the internet at a public domain? *(by S07 / S12)*
+- [x] Q10 — Student app: **hybrid**, an installable web app for every phone + an Android NFC app (APK), one codebase, **no store accounts for the pilot** (D3)
+- [x] Q11 — Branding → **M6** (ICTU Communications provides logo + colours; placeholders until then) · data-protection sign-off → **M11** (synthetic data only until approved)
+- [x] Q12 — Code-signing certificate → **M11** (ICTU IT checks; manual kiosk updates until then)
+- [x] Q13 — Public reachability → **M9 / M11** (ICTU IT checks; campus Wi-Fi only until then). An ICTU subdomain with a public certificate is needed either way
 - [x] ICTU confirms deviation **D1** (PIN or assistant check after matricule entry)
 - [x] ICTU confirms deviation **D2** (iPhones use Scan-the-Kiosk instead of NFC)
+- [x] Deviation **D3** chosen: student platform = web app + Android APK (Q10)
 
 **Follow-up actions from the decisions** (start now; these have external lead times)
 - [ ] ICTU tells the card supplier now: MIFARE DESFire EV3 (≥ 2 KB), **random UID disabled**, plus a `card_uid,matricule` file per batch. The full personalisation spec follows from M1
 - [ ] ICTU starts Meta Business verification and reserves a dedicated WhatsApp number
+- [ ] ICTU IT reserves the subdomain `labpass.ictuniversity.edu.cm` (or similar) and plans a **publicly trusted** TLS certificate (Let's Encrypt DNS-01 or ICTU's wildcard). Passkeys need it even if the server stays campus-only
 
 **[S00 · Repository bootstrap](./03-steps-foundation-backend.md#s00--repository-bootstrap)**
 - [x] `git init -b main`; add `.gitignore` and `.gitattributes`
@@ -100,7 +102,8 @@ Owner: — · Started: — · Completed: — · Details: [S01](./03-steps-founda
 - [ ] Validate 10 blank DESFire EV3 samples: stable UID, relayed AES authentication p95 over PC/SC, failure cases (aggregate results committed)
 - [ ] PC/SC binding tested in Node and in an Electron `utilityProcess` → ADR-0002
 - [ ] HCE spike with a real Keystore key: StrongBox→TEE fallback, async `sendResponseApdu`, cold/locked/deactivated cases
-- [ ] Scan-the-Kiosk PoC: phone camera reading the lab monitor; webcam reading a phone screen
+- [ ] Scan-the-Kiosk PoC: phone camera reading the lab monitor (Android app **and** web app on iPhone + Android); webcam reading `LPR1`/`LPR2` response QRs
+- [ ] Passkey PoC: register and assert a passkey on all three test phones, including the budget Android
 - [ ] Lab PC audit: OS, GPU tier, USB ports, network, admin rights
 - [ ] SIS discovery written up in `docs/spikes/S01-sis.md` (closes Q2)
 - [ ] ADR-0001 (reader) · ADR-0002 (binding) · ADR-0003 (card identification: DESFire EV3) · ADR-0004 (SIS mode) · ADR-0008 (DESFire key custody)
@@ -170,16 +173,16 @@ Owner: — · Started: — · Completed: —
 - [ ] (b) Students API (trigram search, role-scoped profile)
 - [ ] (b) Card binding, **supplier card-batch import**, kiosk link requests
 - [ ] (b) Manual-entry PIN (`/me/pin`) and reset
-- [ ] (c) Enrollment: session, OTP, proof of possession, auto-approve or PENDING, one active credential
+- [ ] (c) Enrollment: session, OTP, proof of possession (Android device key **or** web passkey), auto-approve or PENDING, one active credential
 - [ ] (c) `/me` self-service, lost-phone revoke; admin approve/reject/revoke
-- [ ] (c) Expo push channel + `/me/push-token`
+- [ ] (c) Push channels: Expo push (Android app) + Web Push (web app), `/me/push-token`
 - [ ] **Acceptance:** name, file, malicious-file, import-rollback and enrollment-race fixtures pass
 - [ ] **Acceptance:** 50k-row import in < 60 s with RSS < 300 MB; `pii-detector` review is clean
 
 **[S06 · Inventory, loans & identify](./03-steps-foundation-backend.md#s06--operations-inventory-loans--identify-the-core-engine)**, in PR slices
 - [ ] (a) Equipment & categories CRUD, images, low-stock thresholds
 - [ ] (a) Adjust stock (RESTOCK / WRITE_OFF / CORRECTION) with a 10 s undo
-- [ ] (b) Identify: CARD, HCE, SCAN (`/me/scan` → kiosk socket), MANUAL + `/kiosk/manual/verify`
+- [ ] (b) Identify: CARD, HCE, SCAN (device key or passkey; `/me/scan` → kiosk socket), MANUAL + `/kiosk/manual/verify`
 - [ ] (c) Borrow — `/kiosk/sign-in` (ARCH F5)
 - [ ] (c) Return — `/kiosk/sign-out` (ARCH F6)
 - [ ] (d) Admin loans, force-return, overdue job, `/me/loans`, realtime deltas
@@ -216,6 +219,7 @@ Owner: — · Started: — · Completed: —
 - [ ] Primitives: Button, Input, **Combobox (the kiosk dropdown)**, QuantityStepper, StockHealth, Dialog/Drawer, Toast + Undo, Table, Skeleton, EmptyState, Tabs, KPI Counter, StatusCapsule, PIN pad
 - [ ] CSS/SVG signatures: CapsuleNav (A7), StockSkyline (A5), BlurPush (A8), DepthType (A9), HorizonGlow (A10), plus static fallbacks
 - [ ] Icons: lucide + in-house equipment silhouettes
+- [ ] Apply the ICTU logo and brand colours (`ictu-*` tokens) once ICTU Communications delivers them (Q11). Until then, keep the placeholders and a re-check contrast test
 - [ ] Storybook: every component × state × reduced motion; axe and visual tests
 - [ ] **Acceptance:** 0 serious axe violations; `pnpm evidence:check ui-kit` passes; no DESIGN §2 anti-patterns
 
@@ -292,20 +296,22 @@ Owner: — · Started: — · Completed: — · Details: [S11](./04-steps-surfac
 - [ ] **Acceptance:** conflicts go to admin review and never break I2
 - [ ] **Acceptance:** read-only lock works; the cache is encrypted at rest; `pii-detector` review is clean
 
-### M9 · Student mobile app (S12)
-Owner: — · Started: — · Completed: — · Details: [S12](./04-steps-surfaces-release.md#s12--student-mobile-app-expo--virtual-card-enrollment--loans)
+### M9 · Student app: web app + Android NFC app (S12)
+Owner: — · Started: — · Completed: — · Details: [S12](./04-steps-surfaces-release.md#s12--student-app-expo--installable-web-app--android-nfc-app)
 
-- [ ] (a) Expo foundation: router, query client, secure store, EN/FR, theme, minimum-version check
-- [ ] (b) Android native: Keystore key, headless `HostApduService`, config plugin, NFC detection
-- [ ] (c) iOS native: Secure Enclave key; shared vectors pass in JUnit and XCTest
-- [ ] (d) Screens: onboarding, enroll, OTP, key + biometrics, pending/approved
-- [ ] (d) **Pass** screen with Tap and **Scan kiosk** modes; loans, history, profile
-- [ ] (e) Hardening (screen capture, root warning, pinning ADR); EAS profiles + `runtimeVersion`
+- [ ] ICTU IT provides the LabPass subdomain with a **publicly trusted** TLS certificate, and decides whether it is reachable from the internet (Q13). Needed before device testing; use an HTTPS tunnel for development until then
+- [ ] (a) Expo foundation for **web + Android** targets: router, query client, EN/FR, theme, platform token storage, minimum-version and APK-update check
+- [ ] (b) **Web app (PWA)**: manifest, service worker, install guide (iOS Add to Home Screen), passkeys (WebAuthn), camera QR scan, Web Push, `LPR2` offline QR
+- [ ] (c) **Android native module**: Keystore key, headless `HostApduService`, config plugin, NFC detection; JUnit runs the shared vectors
+- [ ] (d) Shared screens: onboarding, enroll, OTP, credential creation, pending/approved
+- [ ] (d) **Pass** screen: Tap (Android app) and **Scan kiosk** (all); loans, history, profile
+- [ ] (e) Hardening (screen capture, root warning, passkey BE/BS flags, pinning ADR)
+- [ ] (e) Distribution: ICTU-held APK signing key, `/download/android` page (checksum + QR), PWA at `/app`, `runtimeVersion` policy
 
 **Acceptance**
-- [ ] Native vectors pass on Android and iOS
-- [ ] 50 Android taps ≥ 98 % (with the app killed); 20 iPhone scans at 100 %; cold start ≤ 2.5 s
-- [ ] Finish gate at 390x844 and 360x800; TalkBack and VoiceOver pass; security and PII reviews are clean
+- [ ] Android native vectors pass; Playwright passkey flow (virtual authenticator) passes; Lighthouse confirms the PWA is installable
+- [ ] 50 Android-app taps ≥ 98 % (with the app killed); 20 web-app scans each on iPhone Safari and Android Chrome = 100 %; cold start / first load within budget
+- [ ] Finish gate at 390x844 and 360x800 for both targets; TalkBack and VoiceOver pass; security and PII reviews are clean
 
 ---
 
@@ -335,12 +341,15 @@ Owner: — · Started: — · Completed: — · Details: [S13](./04-steps-surfac
 Owner: — · Started: — · Completed: — · Details: [S14](./04-steps-surfaces-release.md#s14--deployment-pilot--handover)
 
 **Production**
-- [ ] `deploy/compose.prod.yml` (api, worker, admin, postgres, redis, Caddy)
+- [ ] ICTU IT decides on the **code-signing certificate** (Q12): signed builds + auto-update, or manual kiosk updates with a runbook
+- [ ] **Data-protection sign-off** from ICTU's legal officer before any real student data is imported (Q11)
+- [ ] Production domain + publicly trusted TLS; public reachability configured if approved (Q13)
+- [ ] `deploy/compose.prod.yml` (api, worker, admin, web app + APK page, postgres, redis, Caddy)
 - [ ] Encrypted nightly backups + a tested restore runbook
 - [ ] Monitoring: Uptime Kuma, GlitchTip/Sentry, kiosk-offline alert
 - [ ] **Real-channel gate:** real email, SMS and WhatsApp alerts delivered (or a signed deferral)
 - [ ] Kiosk installed: driver, signed build, registration, restricted account, power settings
-- [ ] Mobile: pilot APK / Play staged rollout; TestFlight → App Store
+- [ ] Student apps: web app at `/app` + signed APK at `/download/android`, announced with lab posters/QR codes (app stores optional later)
 - [ ] Real SIS import (dry run, then commit)
 - [ ] Supplier **card-batch import** + acceptance test on the first batch + DESFire key ceremony (ADR-0008), then `cardAuthMode=DESFIRE_PREFERRED`
 

@@ -10,7 +10,7 @@
 **Theatre at the kiosk, precision in the admin, intimacy on the phone.**
 Each surface is futuristic in a different way, sized to how often it is used.
 
-| | Kiosk (Cisco lab PC) | Admin console | Student mobile |
+| | Kiosk (Cisco lab PC) | Admin console | Student app (web app + Android app) |
 |---|---|---|---|
 | Job | Identify a student in < 1 s, then borrow or return in 3 taps | Keep stock correct, react to alerts, approve credentials | Hold a credential; see my loans |
 | Audience | Students in a hurry, standing, often in groups | Lab admin and assistants, every day, on a desktop | Students, on budget Android phones and iPhones |
@@ -52,7 +52,7 @@ marketing hero copy inside tools, and ambient animation in data tables.
 | `line` | `#E7E6E3` / `rgba(255,255,255,.08)` | 1 px borders and grid paper |
 | `signal-300 / 500 / 700` | `#7FE3FF / #00A3E0 / #00739E` | Brand light (a nod to Cisco blue). Use **700 for text on light** (500 fails AA) |
 | `ok / low / out` | `#12B76A / #F5A524 / #F04438` | Stock health. Always paired with an icon and a label |
-| `ictu-*` | TBD | Fill in from the ICTU brand guide; Signal remains the "light" colour |
+| `ictu-*` | TBD (decision Q11: ICTU Communications will provide the logo and colours) | Placeholder until delivered; added as extra tokens without redesign. Signal remains the "light" colour |
 
 **Type.** Inter (UI) · **Unbounded** (kiosk/display caps, +0.02 em) · JetBrains Mono (matricules, codes, counts, `tabular-nums`).
 All fonts are self-hosted through `@fontsource` so the kiosk works offline.
@@ -121,10 +121,18 @@ a per-field diff, approve/reject · Alerts: global and per-item thresholds, chan
 quiet hours, a test send button, delivery log · Settings: Sign In/Out labels, manual-entry policy, due policy,
 max items, retention, language · Kiosks: register (code) and status · Users & roles · Audit log · Reports.
 
-**Mobile** — Onboarding (fanned cards on grid paper) · Enroll (matricule, names, DOB) · OTP · Secure key
-(biometric prompt) · Pending / Approved / Rejected · **Pass** (A12). It has two modes: **Tap** on NFC Android, with a mini Reader Eye
-and "Hold near the reader", and **Scan kiosk** on any phone, which opens the camera with a reticle. The offline fallback shows a response QR
-for the kiosk webcam. Other screens: My loans (due countdown) · History · Profile (language, manual-entry PIN, lost phone → revoke).
+**Mobile** (same screens in the **web app** and the **Android app**, decision Q10)
+- **Onboarding:** fanned cards on grid paper. In the web app it adds an "Install LabPass" step; on iPhone this shows how to Add to Home Screen.
+- **Enroll** (matricule, names, DOB) · **OTP** · **Secure key**: a biometric prompt (Android app) or passkey creation (web app).
+- **Pending / Approved / Rejected.**
+- **Pass** (A12), in two modes:
+  - **Tap**: only in the Android app on an NFC phone, with a mini Reader Eye and "Hold near the reader".
+  - **Scan kiosk**: on any phone, opens the camera with a reticle.
+
+  The offline fallback shows a response QR for the kiosk webcam.
+- **Other screens:** My loans (due countdown) · History · Profile (language, manual-entry PIN, lost phone → revoke).
+
+On the web, A12 uses CSS transforms plus `DeviceOrientationEvent` (iOS asks permission first), not Skia, to keep the bundle small.
 
 ## §6 Content-state contract (must be exercised in S13's finish gate)
 
@@ -151,7 +159,7 @@ for the kiosk webcam. Other screens: My loans (due countdown) · History · Prof
 
   The ≥ 98 % success gate applies to **unlocked** phones. A locked phone must never produce a signature.
 - Admin: LCP ≤ 2.0 s and INP ≤ 200 ms on the campus network; route JS ≤ 250 KB gzip; WebGL only on login and the dashboard, lazy-loaded.
-- Mobile: cold start ≤ 2.5 s on a mid-range Android (Tecno/Infinix class); Pass screen at 60 fps; camera ready ≤ 1 s in Scan kiosk mode.
+- Mobile: Android app cold start ≤ 2.5 s on a mid-range Android (Tecno/Infinix class); web app first load ≤ 4 s on campus Wi-Fi (JS ≤ 300 KB gzip), with later loads served from the service worker; Pass screen at 60 fps; camera ready ≤ 1 s in Scan kiosk mode.
 
 ## §8 Finish gate (per UI step, then again in S13)
 
@@ -162,4 +170,7 @@ for the kiosk webcam. Other screens: My loans (due countdown) · History · Prof
    `$env:USERPROFILE\.copilot\skills\frontend-design-direction\scripts\check-evidence.js`.
 4. Run the ECC `make-interfaces-feel-better` review pass.
    - **Web surfaces** (admin, kiosk renderer, ui-kit): also run `browser-qa` (Playwright) for console errors and Web Vitals.
-   - **Mobile**: capture screenshots with Maestro, run accessibility checks with `@testing-library/react-native` role/label queries, and do a manual TalkBack + VoiceOver pass.
+   - **Student apps**:
+     - **Android app**: capture screenshots with Maestro and run accessibility checks with `@testing-library/react-native` role/label queries.
+     - **Web app**: run `browser-qa` (Playwright) and Lighthouse PWA checks.
+     - **Both**: do a manual TalkBack + VoiceOver pass.

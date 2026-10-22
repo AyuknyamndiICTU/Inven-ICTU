@@ -215,7 +215,7 @@ Rules for this step:
    - **No** token access, generic fetch or URLs.
 5. **Scan-the-Kiosk**:
    - K1 shows the newest challenge as `LiveChallengeQR` (A13).
-   - Optional webcam mode decodes `LPR1` response QRs in the renderer and passes the **text** to `submitScanResponse`.
+   - Optional webcam mode decodes `LPR1` (device key) and `LPR2` (passkey) response QRs in the renderer and passes the **text** to `submitScanResponse`.
 6. **Renderer state machine** (XState): `attract → reading → identified → borrowing|returning → confirming → success → attract`.
    - Timers: 45 s inactivity, 8 s success reset.
    - Error state K9; assistant overlay K10 (corner long-press + PIN). Next actions stay focusable during theatre.
@@ -282,7 +282,7 @@ same idempotency keys, so a sync can be retried any number of times safely.
    - Bundle refreshed every 5 minutes; staleness tracked; the store is wiped when the kiosk is revoked.
 3. **Kiosk: offline engine**:
    - Online/offline detection with hysteresis.
-   - Local identification: CARD by UID, HCE with kiosk-generated nonces, SCAN by `LPR1` + webcam, MANUAL by assistant only.
+   - Local identification: CARD by UID, HCE with kiosk-generated nonces, SCAN by `LPR1`/`LPR2` response QR + webcam (device-key SPKI or passkey COSE key), MANUAL by assistant only.
    - A local journal (UUID, `occurredAt`, sequence, evidence) and local availability.
    - The `offlineMaxHours` read-only lock, which an assistant can extend.
    - UI: amber offline capsule (DESIGN K9 variant), an offline badge on receipts, and a pending-sync counter.
@@ -315,71 +315,83 @@ Then repeat the sync to prove that replaying it changes nothing.
 
 ---
 
-## S12 · Student mobile app (Expo) — virtual card, enrollment & loans
+## S12 · Student app (Expo) — installable web app + Android NFC app
 
 | Depends on | Parallel with | Tier | Size | Touches |
 |---|---|---|---|---|
-| S01, S05, S06 | S07, S09, S11 | **strongest** | L | `apps/mobile`, `apps/mobile/modules/ictu-credential` |
+| S01, S05, S06 | S07, S09, S11 | **strongest** | L | `apps/mobile` (web + Android targets), `apps/mobile/modules/ictu-credential` |
 
-**ECC skills:** `react-native-patterns` · `motion-foundations` · `accessibility` · `security-review` · `i18n-sync` · `e2e-testing`
+**ECC skills:** `react-native-patterns` · `motion-foundations` · `accessibility` · `security-review` · `i18n-sync` · `e2e-testing` · `browser-qa` (PWA)
 **Agents:** ECC `specialized/spec-mobile-react-native` · `v3/security-architect` · `v3/pii-detector`
 
-**PR slices:** (a) task 1 · (b) task 2 Android · (c) task 2 iOS · (d) 3 · (e) 4–5.
+**PR slices:** (a) task 1 · (b) task 2 · (c) task 3 · (d) 4 · (e) 5–6.
 
-**Context brief.** The phone holds the student's virtual card.
-- **Android with NFC** taps it on the reader (HCE, ARCH §6).
-- **Every phone**, including iPhone (iOS HCE is EEA-only) and Android without NFC, can **Scan the Kiosk** (ARCH §5 F3).
-- Enrollment is **auto-approved** when details exactly match school records (ARCH §5 F7).
+**Context brief.** The student's virtual card lives on their phone. **One Expo codebase builds two targets** (decision Q10, ARCH §2):
+- **LabPass web app (PWA)**, for every phone including iPhone. It uses a **passkey** and **Scan-the-Kiosk** (ARCH §5 F3). No browser can tap an NFC reader (ARCH §2).
+- **LabPass Android app** (signed APK from a campus download page; no store account needed). It uses a Keystore **device key** and can **tap** the reader (HCE, ARCH §6) or scan.
+
+Enrollment is **auto-approved** when details exactly match school records (ARCH §5 F7, step 4 has both credential kinds).
 
 Build constraints:
-- Custom native code requires an **Expo dev client / EAS Build** (Expo Go will not work).
-- iOS builds and tests need macOS or EAS cloud builds.
-- APDU handling must be **fully native and headless** (ARCH §2).
+- The Android build needs custom native code, so an **Expo dev client**, built with EAS or local Gradle (Expo Go will not work). APDU handling must be **fully native and headless** (ARCH §2).
+- The web app must be served **same-origin with the API over HTTPS on a real domain with a publicly trusted certificate**. Passkeys and PWA install need this (ARCH §2, Q13).
+  For development, use `localhost` (WebAuthn allows it) or an HTTPS tunnel when testing on phones.
+- The iOS native build and app store releases are **out of scope for the pilot**. They need Apple/Google organisation accounts and can be added later from the same codebase.
 
 **Tasks**
-1. **Foundation**: Expo Router, TanStack Query + generated client + zod, `expo-secure-store`, EN/FR, `design-tokens/native`, Reanimated + Skia, `expo-haptics`, `expo-camera`.
-   Check `/meta/app-config` against `minSupportedVersion` at startup.
-2. **Native module `ictu-credential`** (Expo Modules API):
-   - **Android (Kotlin)**:
-     - Keystore P-256 key (StrongBox → TEE fallback, `setUnlockedDeviceRequired(true)`, non-exportable); SPKI + attestation export.
-     - `setActiveCredential(id)` stores the credentialId in native storage.
-     - **`HostApduService` is fully native.** It reads native storage, signs on a worker thread, answers with `sendResponseApdu`, never touches JS, and emits an optional event when the app is alive.
-     - Config plugin: service with `BIND_NFC_SERVICE`; `apduservice.xml` (category `other`, AID `F0494354554C5001`, `requireDeviceUnlock="true"`).
-     - NFC present/enabled detection; `CardEmulation.setPreferredService` while Pass is in the foreground.
-   - **iOS (Swift)**: Secure Enclave P-256 (`kSecAttrTokenIDSecureEnclave`, this device only, when unlocked).
-   - **Both platforms**: `signPop(nonce)`, `signScan(kioskId, nonce, ts)`, `responseQr(...)`. JUnit and XCTest run the **shared `vectors.json`**.
-3. **Screens** (DESIGN §5 Mobile):
-   - Onboarding; Enroll; OTP (autofill); key creation behind `expo-local-authentication`.
-   - Pending/Approved/Rejected (push registered via `/me/push-token`).
-   - **Pass** (A12): Tap mode and **Scan kiosk** mode (camera reads `LPK1` → `POST /me/scan`). Offline fallback shows an `LPR1` response QR with a brightness boost.
+1. **Foundation (both targets)**:
+   - Expo Router (web output + Android), TanStack Query + generated client + zod, EN/FR, `design-tokens/native`, Reanimated.
+   - Platform-specific token storage: `expo-secure-store` on Android; the HttpOnly refresh cookie on web (ARCH §7).
+   - Check `/meta/app-config` at startup. On Android, prompt for an update when a newer APK exists (verify the checksum).
+2. **Web app (PWA)**:
+   - Web manifest, icons, and a service worker (Workbox) caching the app shell plus the last Pass/loans data.
+   - Install prompt; on iOS, an "Add to Home Screen" guide.
+   - `credential.web.ts`: passkey enrollment (`navigator.credentials.create`) and scan assertions (`navigator.credentials.get`, UV required) per ARCH §5 F3/F7 and §6.
+   - Camera QR scanning: `getUserMedia` + `BarcodeDetector`, with a `zxing-wasm` fallback.
+   - Web Push (VAPID) via `/me/push-token`.
+   - Offline `LPR2` response QR, if S01 confirmed the webcam reads it reliably.
+3. **Android native module `ictu-credential`** (Expo Modules API, Kotlin):
+   - **Key:** Keystore P-256 key (StrongBox → TEE fallback, `setUnlockedDeviceRequired(true)`, non-exportable); SPKI + attestation export. `setActiveCredential(id)` stores the credentialId in native storage.
+   - **HCE service:** **`HostApduService` is fully native.** It reads native storage, signs on a worker thread, answers with `sendResponseApdu`, never touches JS, and emits an optional event when the app is alive.
+   - **Config plugin:** service with `BIND_NFC_SERVICE`; `apduservice.xml` (category `other`, AID `F0494354554C5001`, `requireDeviceUnlock="true"`).
+   - **NFC handling:** present/enabled detection; `CardEmulation.setPreferredService` while Pass is in the foreground.
+   - **Signing API:** `signPop`, `signScan`, `responseQr` (`LPR1`). JUnit runs the **shared `vectors.json`**. Expo push via `/me/push-token`.
+4. **Screens** (DESIGN §5 Mobile, shared by both targets):
+   - Onboarding (web: install guide); Enroll; OTP (autofill); credential creation (Android: device key behind `expo-local-authentication`; web: passkey).
+   - Pending/Approved/Rejected.
+   - **Pass** (A12): **Tap** mode (Android app with NFC only) and **Scan kiosk** mode (all). Offline fallback is a response QR with a brightness boost.
    - My loans, history, profile (language, **manual-entry PIN**, **lost phone → revoke**, sign out).
-4. **Hardening**: screen capture blocked on the response QR on Android (`expo-screen-capture`); iOS detection plus a live shimmer.
-   The response QR only works at one kiosk for 60 s. Root/jailbreak is a soft warning. Pinning decision in an ADR.
-5. **Distribution prep**: EAS profiles `development`, `preview` (pilot APK) and `production`; `runtimeVersion` policy for EAS Update (JS-only fixes); icons and splash from tokens.
+5. **Hardening**:
+   - Android: screen capture blocked on the response QR (`expo-screen-capture`). Web: a live shimmer.
+   - Response QRs work at one kiosk for 60 s only. Root warning on Android (soft).
+   - Record the passkey backup flags (BE/BS) at enrollment. Pinning decision in an ADR.
+6. **Distribution**:
+   - Android release APK signed with an **ICTU-held** signing key (custody documented, RSK-17). A `/download/android` page with QR, checksum and install instructions ("allow installs from this source").
+   - PWA served at `/app`. `runtimeVersion` policy for EAS Update (Android JS-only fixes). Icons and splash from the tokens.
 
 **Verify**
 ```powershell
 pnpm --filter mobile test                                   # jest + @testing-library/react-native (incl. role/label a11y queries)
 cd apps\mobile\android; .\gradlew.bat :ictu-credential:testDebugUnitTest
-pnpm --filter mobile test:ios      # runs `xcodebuild test` on the macOS CI job / EAS build; required for exit
-pnpm --filter mobile e2e           # Maestro: enroll → OTP → approved → Pass (Tap + Scan modes)
+pnpm --filter mobile e2e           # Maestro (Android app): enroll → OTP → approved → Pass (Tap + Scan modes)
+pnpm --filter mobile test:web      # Playwright with a virtual WebAuthn authenticator: enroll passkey → scan kiosk → identified
+pnpm --filter mobile lighthouse    # PWA installable, offline shell works
 pnpm evidence:check mobile
 ```
 Hardware checks:
-- 50 Android taps on the kiosk reader, unlocked, with the app killed: ≥ 98 %.
-- 20 iPhone scans of the kiosk QR: 100 %.
-- Budget Android cold start ≤ 2.5 s.
+- 50 Android-app taps on the kiosk reader, unlocked, with the app killed: ≥ 98 %.
+- Web app, 20 scans each: iPhone Safari (installed PWA) and Android Chrome, 100 %.
+- Budget Android: app cold start ≤ 2.5 s; web app first load ≤ 4 s on campus Wi-Fi.
 - Manual TalkBack and VoiceOver pass.
 
 **Exit criteria**
-- [ ] Native vectors pass on both platforms; the hardware checks meet their targets.
-- [ ] The finish gate passes at `390x844` and `360x800`; the security and PII reviews are clean.
+- [ ] Android native vectors pass; passkey enrollment and scan work on iPhone and Android; the hardware checks meet their targets.
+- [ ] The finish gate passes at `390x844` and `360x800` for both targets; the security and PII reviews are clean.
 
 **Rollback.**
-- Staged releases only (pilot APK → Play staged rollout / TestFlight).
-- JS-only fixes ship through EAS Update on the same `runtimeVersion`.
-- Raise `minSupportedVersion` to force an upgrade away from a bad native build.
-- Revoke affected credentials from admin.
+- **Web app:** redeploy the previous build, since the service worker updates on next load.
+- **Android:** keep the previous APK on the download page; JS-only fixes ship through EAS Update on the same `runtimeVersion`; raise `minSupportedVersion` to force an upgrade away from a bad native build.
+- **Both:** revoke affected credentials from admin.
 
 ---
 
@@ -397,7 +409,7 @@ Run the DESIGN §8 finish gate for every surface and exercise every DESIGN §6 s
 
 **Tasks**
 1. **STRIDE threat model** (`docs/security/threat-model.md`) with an **attack test per threat**:
-   - replayed or foreign-kiosk challenge; response-QR screenshot replay;
+   - replayed or foreign-kiosk challenge; response-QR screenshot replay; shared or synced passkeys (RSK-16); tampered or fake sideloaded APK (RSK-17); web app XSS stealing sessions (CSP, HttpOnly cookies);
    - manual-matricule enumeration and PIN brute force; cloned UID card vs DESFire authentication; DESFire relay replay; key leakage;
    - theft of the kiosk offline cache; offline replay or tampered journal;
    - token theft from the kiosk renderer; tampered update feed;
@@ -445,8 +457,9 @@ pnpm ops:reconcile
 Pass the **real-channel gate**, then run a **two-week pilot** with one class.
 
 **Tasks**
-1. `deploy/compose.prod.yml`: `api`, `worker`, `admin` (Next standalone), `postgres`, `redis`, and **Caddy** (automatic TLS, or an internal CA on the LAN).
-   Healthchecks, limits, restart policies, Docker secrets. Images tagged per release.
+1. `deploy/compose.prod.yml`: `api`, `worker`, `admin` (Next standalone), the web app (static PWA at `/app` + APK download page), `postgres`, `redis`, and **Caddy**.
+   - TLS must be a **publicly trusted certificate** for the ICTU subdomain (Let's Encrypt via DNS-01, or ICTU's wildcard certificate). An internal CA is **not** enough, because phones won't trust it for passkeys or PWA install (ARCH §2, Q13).
+   - Healthchecks, limits, restart policies, Docker secrets. Images tagged per release.
 2. **Backups**: nightly encrypted `pg_dump` plus the image volume, kept off-site for 14 days. The restore runbook is tested.
 3. **Monitoring**: Uptime Kuma (API, admin, kiosk heartbeat → admin alert if a kiosk is offline > 5 min) and GlitchTip/Sentry.
 4. **Real-channel gate (mandatory, R8)**:
@@ -456,7 +469,10 @@ Pass the **real-channel gate**, then run a **two-week pilot** with one class.
 5. **Kiosk install**:
    - Reader driver; the signed NSIS build, or the manual-update runbook if Q12 is unresolved; device registration.
    - A restricted Windows account with auto-login and auto-start (Shell Launcher on Enterprise/Education); no sleep; update hours outside lab time.
-6. **Mobile release**: pilot APK → Play staged rollout; TestFlight → App Store. This needs ICTU **organisation** accounts (Q10).
+6. **Student app release** (decision Q10):
+   - Publish the web app at `https://<labpass-domain>/app`.
+   - Publish the signed Android APK at `/download/android` (checksum + install guide), and announce both with posters/QR codes in the lab.
+   - **App stores are optional later.** Google Play and the App Store need ICTU **organisation** accounts with a D-U-N-S number, and can reuse the same codebase.
 7. **Real data** with the Registry:
    - SIS import as a dry run first, then commit (with rollback available).
    - **Card batch import** of the supplier's `card_uid,matricule` file. Run the supplier acceptance test on the first batch.
@@ -480,4 +496,4 @@ pnpm ops:reconcile -- --env production
 **Rollback.**
 - Server: redeploy the previous image tag. Migrations are expand → migrate → contract, so the prior tag stays compatible.
 - Kiosk: promote the prior signed build.
-- Mobile: halt the staged rollout and raise `minSupportedVersion` / use EAS Update.
+- Student apps: redeploy the previous web app build; put the previous APK back on the download page and raise `minSupportedVersion` / use EAS Update.

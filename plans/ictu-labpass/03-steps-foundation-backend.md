@@ -52,7 +52,7 @@ git worktree list   # main + s01 + s02
 
 (b) Android **HCE with a real Keystore key** answers our reader fast enough (ARCH §2 note on `HostApduService`, §6).
 (c) A PC/SC binding builds for **current Electron** on the lab PC's OS (ARCH §2).
-(d) A phone camera reads a QR from the **lab monitor** reliably, and the webcam reads a QR off a phone (ARCH §5 F3).
+(d) A phone camera reads a QR from the **lab monitor** reliably, both in the Android app and in the **web app** (camera API in Safari and Chrome). Passkeys work on the test phones. The webcam reads response QRs off a phone (ARCH §5 F3).
 (e) The **SIS** can supply students through an API or an export (ARCH §9).
 
 Procure on day 1:
@@ -75,16 +75,19 @@ Procure on day 1:
    - Sign off the main thread and answer with `sendResponseApdu`.
    - Test cold process (app killed), activity not running, screen locked (must produce **no** signature), and `onDeactivated` mid-exchange.
    - `tap-test.mjs` measures the three HCE metrics in DESIGN §7 over 50 unlocked taps per phone.
-4. **Scan-the-Kiosk proof of concept.**
-   - Render an `LPK1` QR on the lab monitor. Measure phone-camera decode time (`expo-camera` in a throwaway Expo app) at 30–60 cm, under lab lighting, on all three phones.
-   - Measure webcam decoding of a phone-shown `LPR1` QR (`@zxing/browser`).
+4. **Scan-the-Kiosk proof of concept** (decision Q10: web app + Android app).
+   - Render an `LPK1` QR on the lab monitor. Measure camera decode time at 30–60 cm, under lab lighting, on all three phones, in **both**:
+     - a throwaway Expo Android build (`expo-camera`);
+     - a throwaway **web page** over HTTPS (`getUserMedia` + `BarcodeDetector`/`zxing-wasm`) on iPhone Safari (installed to the home screen) and Android Chrome.
+   - **Passkeys:** register and assert a passkey (`@simplewebauthn/browser` + server) on all three phones, including the budget Tecno/Infinix. Record platform authenticator availability and the BE/BS flags.
+   - Measure webcam decoding of a phone-shown `LPR1` QR and of the larger **`LPR2`** passkey-assertion QR (`@zxing/browser`). If `LPR2` is unreliable, record that web-app users need the network for offline-mode scans.
 5. **Lab PC audit.** Record OS edition, CPU, GPU, RAM, display, USB ports, wired network, admin rights, and the `detect-gpu` tier.
 6. **SIS discovery** (with Registry/IT). Record the system's name, API docs or an **anonymised** sample, available fields (DOB? phone? email? photo? card UID?) and update frequency.
    Write `docs/spikes/S01-sis.md`.
 7. **ADRs:** 0001 reader hardware · 0002 PC/SC binding · 0003 card identification (DESFire EV3 with relayed authentication, decision Q1) · 0004 SIS integration mode · 0008 DESFire key custody (who holds the master key and how it is escrowed).
 8. **Freeze Tap Protocol v1.** Validate S03's draft `docs/protocols/tap-protocol-v1.md` and `vectors.json` on real hardware.
    Apply any fixes, then mark the spec **FROZEN**.
-   Then update the blueprint decision gates (Q1, Q2, Q8) and add a changelog row.
+   Then update the blueprint decision gates (Q1, Q2) and add a changelog row.
 
 **Verify**
 ```powershell
@@ -184,6 +187,8 @@ The tap protocol is written here as a **DRAFT**, and S01 freezes it on real hard
    Add `tap-protocol/verify.ts`, `sign.ts` (test helper) and `vectors.json`. Vectors cover positive cases plus **malformed** ones:
    - truncated APDU, wrong Lc, bad DER, base64url with padding, wrong prefix/version;
    - expired, consumed and foreign-kiosk nonce; revoked credential.
+
+   Also add **passkey vectors** made with a software WebAuthn authenticator: valid assertion; wrong rpId or origin; UV flag missing; challenge for another kiosk; `signCount` going backwards; malformed `LPR2`.
 7. Testcontainers test proving the CHECKs, the partial unique index and the append-only triggers fire.
 8. Write ADR-0005 (contract-first + conventions) and ADR-0006 (stock ledger + DB-transactional idempotency).
 
@@ -297,12 +302,15 @@ Whichever of S05/S06 merges **second** rebases and regenerates its migration (`p
 5. **Manual-entry PIN**: `POST /me/pin` (argon2; requires a session younger than 5 min) and admin/assistant reset. Used by S06 F4.
 6. **Enrollment** (ARCH §5 F7 exactly):
    - `EnrollmentSession` binds all phases; `normalizeName`; OTP hashed, 5 attempts, invalidated after use.
-   - **Proof of possession** over `popNonce`.
+   - **Proof of possession** over `popNonce`, done one of two ways:
+     - Android app: a device-key signature;
+     - web app: a **passkey registration** verified with `@simplewebauthn/server` (rpId = the LabPass domain from env, origin allow-list, UV required, attestation `none`; store the COSE key, signCount and BE/BS flags).
    - Approval runs in one transaction with `SELECT … FOR UPDATE` on the student. It revokes the previous credential and its token family.
    - Rate limits. Android attestation is stored **for audit only** (ADR-0007 decides future enforcement).
 7. **Self-service + admin**: `/me`, `/me/credential`, `/me/credential/revoke` (lost phone); the admin queue; approve (`verifiedInPerson` required on mismatch), reject, revoke.
    Outbox events `CredentialRequested` and `CredentialDecided`.
-8. **Push**: `ExpoPushChannel` adapter + `POST /me/push-token`. Notify on credential decision.
+   Web-app sessions use the HttpOnly refresh cookie (ARCH §7).
+8. **Push**: `ExpoPushChannel` (Android app) and `WebPushChannel` (VAPID, web app) adapters + `POST /me/push-token`. Notify on credential decision.
 
 **Verify**
 ```powershell
@@ -351,7 +359,7 @@ Use the `withIdempotency` helper from S04. The same parallel-work rule as S05 ap
    - Writes a movement + `StockChanged`. **Undo** (10 s) is a compensating movement.
 3. **Identify** (ARCH §5 F1–F4):
    - `CARD`: HMAC lookup.
-   - `HCE` / `SCAN`: verify with the **same `verify.ts`** as contracts, plus atomic challenge consumption.
+   - `HCE` / `SCAN`: verify with the **same `verify.ts`** as contracts, plus atomic challenge consumption. SCAN accepts device-key signatures or passkey assertions (`POST /me/scan/options` issues the bound WebAuthn challenge).
    - `POST /me/scan`: verifies, then emits `identified` to the target kiosk socket.
    - `MANUAL`: returns name + photo only, then `POST /kiosk/manual/verify` with `PIN` / `OTP` / `ASSISTANT` (`OPEN` only if set by SUPER_ADMIN).
 

@@ -14,7 +14,9 @@
 | SIS | The school's Student Information System — the source of truth for students. |
 | Kiosk | The Cisco-lab PC running the LabPass desktop app, with a USB NFC reader. |
 | Kiosk challenge | A single-use, server-issued 16-byte nonce bound to one kiosk (TTL 60 s). It drives every phone-based identification. |
-| Virtual card | The student's phone credential, a hardware-backed P-256 key. Android with NFC **taps** it (HCE). Any phone (iPhone, Android without NFC) uses **Scan-the-Kiosk**: the app scans the kiosk's live challenge QR and signs it. |
+| Virtual card | The student's phone credential. Two kinds (decision Q10): a hardware-backed P-256 **device key** in the **LabPass Android app**, which can **tap** the reader (HCE) or scan; and a **passkey** (WebAuthn) in the **LabPass web app** on any phone, which uses **Scan-the-Kiosk**: the phone scans the kiosk's live challenge QR and signs it. |
+| PWA | Progressive Web App: the installable LabPass web app (built from the same Expo codebase), served over HTTPS from the LabPass server. |
+| Passkey | A WebAuthn credential kept by the phone's platform authenticator (iCloud Keychain / Google Password Manager) and unlocked with Face ID, fingerprint or the screen lock. |
 | HCE | Android Host Card Emulation — the phone answers the reader like a smart card. |
 | DESFire EV3 | The NXP MIFARE DESFire EV3 chip chosen for the new ICTU ID cards (decision Q1). It supports AES mutual authentication, so a card cannot be cloned by copying its UID. |
 | Offline mode | The kiosk keeps recording loans while the API is unreachable, then syncs them (decision Q6, ARCH §5 F9). |
@@ -28,14 +30,19 @@ Open questions and decision gates are in [00-blueprint.md → Decision gates](./
 | `apps/api` | NestJS 11 (Fastify) · Prisma · PostgreSQL 17 · Redis 7 + BullMQ · Socket.IO · `ObjectStorage` port (local disk default, S3 optional) | all |
 | `apps/admin` | Next.js (App Router) · Tailwind v4 · Radix · Motion · TanStack Query/Table | admins, lab assistants |
 | `apps/kiosk` | Electron (electron-vite) · React · XState · `ReaderDriver` port (PC/SC) · OGL (WebGL) | students at the lab PC |
-| `apps/mobile` | Expo (dev client / EAS) · Expo Router · Reanimated · Skia · `expo-camera` · custom native module `ictu-credential` | students |
+| `apps/mobile` | **One Expo codebase, two targets (decision Q10):** an **installable web app (PWA)** for every phone (Expo Router web output, service worker, WebAuthn passkeys, camera QR scan, Web Push), and an **Android app** (dev client / EAS or local Gradle build, distributed as a signed APK from a campus download page) with the native module `ictu-credential` (HCE + Keystore). The iOS native build and app store releases are deferred. | students |
 | `packages/*` | `contracts` (OpenAPI → typed client, tap-protocol vectors) · `design-tokens` · `motion` · `ui` · `i18n` · `config` | shared |
 
 Monorepo: pnpm workspaces + Turborepo. TypeScript strict everywhere. Backend follows **ports & adapters**.
 
 ### Platform facts that shaped the design (verified Oct 2026)
-- **iOS HCE is EEA-only**, so it is unavailable in Cameroon. iPhones use **Scan-the-Kiosk** (camera + Secure Enclave key).
+- **iOS HCE is EEA-only**, so it is unavailable in Cameroon. iPhones use the **web app** with **Scan-the-Kiosk** (camera + passkey).
 - Many budget Android phones (some Tecno/Infinix/itel models) **lack NFC**, so Scan-the-Kiosk works on every phone.
+- **No browser can emulate an NFC card** (verified Oct 2026). Web NFC exists only in Chrome on Android and only reads/writes NDEF tags; Safari has none.
+  Phone **tap** therefore needs the native Android app. The web app uses Scan-the-Kiosk.
+- Passkeys and PWA installation need **HTTPS on a real domain with a publicly trusted certificate**. They do not work on a bare IP address or with a certificate from an internal CA that phones don't trust.
+  Even a campus-only server therefore needs an ICTU subdomain and a public certificate. Let's Encrypt **DNS-01** works without exposing the server to the internet; an existing ICTU wildcard certificate also works (Q13).
+- On iPhones, Web Push only works when the PWA has been added to the home screen (iOS 16.4+). Onboarding should prompt students to install it.
 - **ACR122U is unreliable with Android HCE**. Standardise on **ACS ACR1252U** (or ACR1552U / HID Omnikey 5022).
 - Web NFC does not exist on desktop browsers, so the kiosk is a native (Electron) app talking PC/SC.
 - `nfc-pcsc` (last published 2021) wraps `@pokusew/pcsclite` (2020, `nan` + node-gyp), so it may not build for current Electron.
@@ -54,7 +61,7 @@ flowchart LR
     CAM[Webcam, optional] --> KMAIN
   end
   CARD[Physical NFC ID card] -. ISO 14443 .-> RDR
-  PHONE[Student phone - LabPass app] -. HCE APDUs, Android .-> RDR
+  PHONE[Student phone - LabPass Android app or web app] -. HCE APDUs, Android app only .-> RDR
   KUI -. live challenge QR on screen .-> PHONE
   PHONE -- HTTPS student token: signed challenge --> API
   KMAIN -- HTTPS + WSS device token --> API[NestJS API + worker]
@@ -72,7 +79,7 @@ apps/api            modules: platform, auth, settings, kiosks, students, directo
                     equipment, stock, loans, identify, notifications, alerts, reports, audit
 apps/admin          Next.js admin console
 apps/kiosk          main (reader, api client, socket, ipc) / preload / renderer (React)
-apps/mobile         Expo app + modules/ictu-credential (Kotlin HostApduService + Keystore, Swift Secure Enclave)
+apps/mobile         Expo app → web (PWA) + Android targets; modules/ictu-credential (Kotlin HostApduService + Keystore); credential.web.ts (WebAuthn)
 packages/contracts  openapi.yaml, generated client, events/*.json, tap-protocol/{vectors.json, verify.ts}
 packages/design-tokens · motion · ui · i18n · config
 spikes/             throwaway hardware proofs (S01), never imported by apps
@@ -90,9 +97,9 @@ Bounded contexts: **Identity** (students, cards, credentials), **Inventory** (eq
 | `DirectoryImport` / `DirectoryImportIssue` / `DirectoryImportChange` | source `FILE/REST`, counts, status, actor / row, field, message / studentId, **before jsonb**, after jsonb | Before-images allow a **compensating rollback** of a bad import. |
 | `CardBinding` | studentId, uidHmac (HMAC-SHA256 with a server pepper), cardTech `DESFIRE_EV3/OTHER`, keyVersion, status, createdVia `SUPPLIER_FILE/SIS/OTP/ADMIN` | Raw UIDs are never stored. |
 | `EnrollmentSession` | id, matricule, submittedFields (jsonb), matchResult (per-field), otpHash, otpAttempts, otpVerifiedAt, popNonce, expiresAt (15 min), status | Binds all enrollment phases together (F7). |
-| `MobileCredential` | id (UUID = credentialId), studentId, publicKeySpki, platform `ANDROID/IOS`, capabilities `{hce, scan}`, deviceLabel, attestation (jsonb, audit only), status `PENDING/ACTIVE/REVOKED/REJECTED`, tokenFamilyId | **Partial unique index**: one `ACTIVE` per student. |
+| `MobileCredential` | id (UUID = credentialId), studentId, kind `DEVICE_KEY/PASSKEY`, platform `ANDROID_APP/WEB`, capabilities `{hce, scan}`, deviceLabel, status `PENDING/ACTIVE/REVOKED/REJECTED`, tokenFamilyId. DEVICE_KEY: publicKeySpki, attestation (jsonb, audit only). PASSKEY: webauthnCredentialId, cosePublicKey, signCount, backupEligible, backedUp, transports | **Partial unique index**: one `ACTIVE` per student. |
 | `CredentialRequest` | enrollmentSessionId, credentialId, decision `AUTO_APPROVED/PENDING/APPROVED/REJECTED`, reviewerId, verifiedInPerson, reason | The admin queue. |
-| `PushToken` | studentId, expoPushToken, platform, lastSeenAt | |
+| `PushToken` | studentId, kind `EXPO/WEBPUSH`, token or Web Push subscription (jsonb), platform, lastSeenAt | |
 | `EquipmentCategory` | name, icon, sortOrder | e.g. Routers, Switches, Cables… |
 | `Equipment` | code (unique), name, categoryId, description, imageKey, unit, `totalQuantity`, `availableQuantity`, `lowStockThreshold?` (null → global default), active, version | `CHECK (available >= 0 AND available <= total)`. |
 | `StockMovement` | equipmentId, type `RESTOCK/WRITE_OFF/CORRECTION/ISSUE/RETURN/DAMAGED/LOST`, delta, actorType, actorId, loanLineId?, kioskId?, reason, createdAt | **Append-only** (a trigger blocks UPDATE/DELETE). |
@@ -133,11 +140,17 @@ The attract screen shows the newest one as a QR.
 The phone signs natively and the kiosk posts `{method:"HCE", credentialId, nonce, ts, signature}`. The API verifies it (§6),
 then responds as in F1. A locked phone gets no APDUs (`requireDeviceUnlock`), so the kiosk shows "Unlock your phone and tap again".
 
-**F3 — Scan-the-Kiosk (any phone).** The student opens **Pass → Scan kiosk** and the camera reads the live challenge QR.
-The app signs it with its hardware key and calls `POST /me/scan` (student token). The API verifies and consumes the challenge,
-then emits `identified` to that kiosk's socket. The kiosk renders the student exactly as in F1.
-**Offline phone fallback:** the app shows a response QR (§6), and the kiosk webcam (or an optional USB 2D scanner) reads it and posts
-`{method:"SCAN", …}`. The response QR is bound to one kiosk challenge, so screenshots cannot be replayed.
+**F3 — Scan-the-Kiosk (any phone; the only phone method in the web app).**
+1. The student opens **Pass → Scan kiosk**, and the camera reads the live challenge QR.
+2. The phone proves it holds the credential:
+   - **Android app (DEVICE_KEY):** signs with its hardware key and calls `POST /me/scan {kioskId, nonce, ts, sig}`.
+   - **Web app (PASSKEY):** calls `POST /me/scan/options {kioskId, nonce}`. The challenge returned is bound to that kiosk and nonce.
+     The browser runs `navigator.credentials.get` with user verification (Face ID / fingerprint / screen lock), then the app posts the assertion to `POST /me/scan`.
+3. The API verifies, consumes the challenge, and emits `identified` to that kiosk's socket. The kiosk renders the student exactly as in F1.
+
+**Offline phone fallback:** the phone shows a response QR (§6), and the kiosk webcam (or an optional USB 2D scanner) reads it and posts `{method:"SCAN", …}`.
+The response QR is bound to one kiosk challenge, so screenshots cannot be replayed.
+The web app's version (`LPR2`, carrying a WebAuthn assertion) is larger. S01 checks that the webcam reads it reliably.
 
 **F4 — Manual matricule.** The student types a matricule. The kiosk shows **name + photo** (as the brief requires), then requires
 verification before any Sign In/Out, according to `manualEntryPolicy`:
@@ -169,8 +182,12 @@ Admin force-return and stock adjustments use the same pattern.
 2. If all fields match and the SIS has a contact, a 6-digit OTP (hashed, 10 min, 5 attempts) goes to the **SIS-registered** email/phone.
    The masked destination is returned. If fields mismatch or there is no contact, the session is marked for review.
 3. `POST /enroll/otp/verify {sessionId, code}` → `otpVerifiedAt`. The OTP state is then invalidated, and the response carries `popNonce`.
-4. The app creates a non-exportable P-256 key (Android Keystore, StrongBox when available; iOS Secure Enclave). It then calls
-   `POST /enroll/key {sessionId, spki, platform, capabilities, sig(popNonce)}`. This is **proof of possession**. The Android attestation chain is stored for audit only.
+4. The phone creates its credential and proves possession of it:
+   - **Android app:** a non-exportable P-256 key in the Android Keystore (StrongBox when available).
+     It calls `POST /enroll/key {sessionId, spki, platform, capabilities, sig(popNonce)}`. This is **proof of possession**. The attestation chain is stored for audit only.
+   - **Web app:** a **passkey**. It calls `POST /enroll/passkey/options {sessionId}`, then the browser runs `navigator.credentials.create` with challenge = `popNonce`,
+     the rpId set to the LabPass domain, user verification required and attestation `none`.
+     It then calls `POST /enroll/passkey {sessionId, registrationResponse}`, which the server verifies with `@simplewebauthn/server`.
 5. In one transaction locking the student row:
    - **All fields match + OTP verified + student ACTIVE → `AUTO_APPROVED`**: the credential becomes ACTIVE, the previous credential and its token family are revoked, and a push notification is sent.
    - Otherwise → `PENDING`, with a per-field diff in the realtime admin queue. Approving a mismatch requires `verifiedInPerson=true`.
@@ -201,7 +218,8 @@ The bundle is stored in an encrypted local SQLite file, whose key is wrapped wit
 *Identifying students offline:*
 - **CARD**: UID lookup only. Offline DESFire authentication is impossible, because the keys stay on the server. The loan is flagged.
 - **HCE**: the kiosk generates its own nonces and verifies signatures locally against the cached SPKIs.
-- **SCAN**: only through the `LPR1` response QR, read by the webcam and verified locally.
+- **SCAN**: only through the response QR, read by the webcam and verified locally.
+  `LPR1` (device key) is checked against the cached SPKI. `LPR2` (passkey) is checked against the cached COSE public key, with the kiosk's own nonce as the challenge.
 - **MANUAL**: lab-assistant confirmation only. Student PIN hashes are never cached on the kiosk.
 
 *Transactions.* Each offline borrow or return is written to a local journal with:
@@ -237,15 +255,20 @@ Signed message (HCE): ASCII `ICTU-LP1-HCE` ‖ credentialId ‖ nonce ‖ kioskI
 
 **Scan-the-Kiosk.**
 - Challenge QR: `LPK1.<kioskId>.<nonce>`.
-- Phone → API: `POST /me/scan {kioskId, nonce, ts, sig}`.
-- Signed message (SCAN): ASCII `ICTU-LP1-SCAN` ‖ credentialId ‖ nonce ‖ kioskId ‖ ts.
-- Offline response QR: `LPR1.<credentialId>.<nonce>.<ts as decimal>.<sig>`.
+- **Device key (Android app):**
+  - Phone → API: `POST /me/scan {kioskId, nonce, ts, sig}`.
+  - Signed message (SCAN): ASCII `ICTU-LP1-SCAN` ‖ credentialId ‖ nonce ‖ kioskId ‖ ts.
+  - Offline response QR: `LPR1.<credentialId>.<nonce>.<ts as decimal>.<sig>`.
+- **Passkey (web app):**
+  - WebAuthn challenge = SHA-256(ASCII `ICTU-LP1-PK` ‖ kioskId ‖ nonce), so the challenge is bound to one kiosk and nonce. User verification (UV) is required.
+  - The server checks the rpId hash, the origin (the LabPass domain only), the UV flag, the signature against the stored COSE key, and that the `signCount` has not gone backwards (when it is non-zero).
+  - Offline response QR: `LPR2.<credentialId>.<nonce>.<authenticatorData>.<clientDataJSON>.<signature>`, all base64url. It is about 500 characters, so it uses a larger QR (checked in S01).
 
-**Server acceptance (both methods).** All of the following must hold:
-- The credential is ACTIVE and the signature verifies against the stored SPKI.
+**Server acceptance (all methods).** All of the following must hold:
+- The credential is ACTIVE, and its signature or assertion verifies against the stored public key.
 - `GETDEL kc:{kioskId}:{nonce}` succeeds, which proves the challenge was server-issued, belongs to this kiosk, and is unused.
 - The kioskId matches the caller: the device token (HCE / response QR) or the target kiosk (`/me/scan`).
-- `|now − ts|` ≤ 30 s (HCE: kiosk clock, NTP-synced) or ≤ 120 s (SCAN: phone clock).
+- `|now − ts|` ≤ 30 s (HCE: kiosk clock, NTP-synced) or ≤ 120 s (SCAN device key: phone clock). Passkey assertions carry no timestamp, so the 60 s challenge TTL bounds them.
 
 **Android service.** `apduservice.xml`: category `other`, `android:requireDeviceUnlock="true"`, AID group as above.
 The key uses `setUnlockedDeviceRequired(true)`. It tries StrongBox and falls back to the TEE on `StrongBoxUnavailableException`.
@@ -290,9 +313,11 @@ UID-only identification is clonable, which is acceptable because the photo is sh
 - Electron: `contextIsolation`, `sandbox`, no `nodeIntegration`, strict CSP, no remote content.
 - Auto-update requires **signed installers** (Authenticode) served from an HTTPS, allow-listed, versioned feed, with signature verification. Without signing material, auto-update is **disabled** and updates are installed manually.
 
-**Mobile app**
-- Short-lived access JWT plus a rotating refresh token (reuse detection, family revocation) in `expo-secure-store`.
-- `/meta/app-config` returns `minSupportedVersion`, which acts as a kill switch for bad builds.
+**Student apps**
+- **Android app:** a short-lived access JWT plus a rotating refresh token (reuse detection, family revocation), kept in `expo-secure-store`.
+- **Web app:** the same token model, but the refresh token lives in an `HttpOnly; Secure; SameSite=Strict` cookie on the LabPass origin, never in `localStorage`. The web app and API are served from the **same origin**.
+- `/meta/app-config` returns `minSupportedVersion` and the current APK download URL and checksum. It acts as a kill switch for bad builds, and the Android app uses it to prompt for updates.
+- The APK signing key is held by ICTU (RSK-17).
 
 **Abuse limits (Redis)**
 - Rate limits on login, identify, manual lookup, enrollment, OTP send/verify, and `/me/scan`.
@@ -318,7 +343,7 @@ UID-only identification is clonable, which is acceptable because the photo is sh
 | Loans | `POST /kiosk/sign-in`, `POST /kiosk/sign-out` (Idempotency-Key), `GET /loans`, `POST /loans/{id}/force-return` |
 | Equipment | CRUD `/equipment`, `/categories`; `POST /equipment/{id}/adjust`; `GET /equipment/{id}/movements` |
 | Students | `GET /students`, `GET /students/{id}`; `POST /directory/imports` → preview, `…/{id}/commit`, `…/{id}/rollback`; connector config / test / sync; card bind/unbind, link requests |
-| Mobile | `POST /enroll/start`, `/enroll/otp/verify`, `/enroll/key`; `GET /me`, `/me/loans`, `/me/credential`; `POST /me/scan`, `/me/push-token`, `/me/pin`, `/me/credential/revoke`; `GET /meta/app-config` |
+| Mobile | `POST /enroll/start`, `/enroll/otp/verify`, `/enroll/key` (Android app), `/enroll/passkey/options` + `/enroll/passkey` (web app); `GET /me`, `/me/loans`, `/me/credential`; `POST /me/scan/options` (passkey), `/me/scan`, `/me/push-token` (Expo or Web Push), `/me/pin`, `/me/credential/revoke`; `GET /meta/app-config`; static `/app` (PWA) and `/download/android` (APK) |
 | Credentials (admin) | `GET /credential-requests`, `POST …/{id}/approve` · `/reject`, `POST /credentials/{id}/revoke` |
 | Alerts | `GET/PUT /alerts/rules`, `POST /notifications/test`, `GET /notifications/log`, `POST /admin-users/me/verify-phone`, `POST /webhooks/whatsapp` (+GET verify) |
 | Reports/Audit | `GET /reports/usage`, `/reports/export`, `GET /audit` |
