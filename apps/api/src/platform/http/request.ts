@@ -19,6 +19,8 @@ export interface StudentPrincipal {
   studentId: string;
   credentialId: string;
   familyId: string;
+  /** When the access token was issued (ms); sensitive actions require a recent sign-in. */
+  issuedAt: number;
 }
 
 export interface LpRequest extends FastifyRequest {

@@ -47,6 +47,14 @@ export const apiEnvSchema = z
     TRUST_PROXY: envBoolean.default(true),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
     CONTRACT_VALIDATE_RESPONSES: envBoolean.optional(),
+    /** Hosts allowed in imported photo_url values (ARCH §9). */
+    PHOTO_HOSTS: csv.default([]),
+    /** Web Push (student web app). Generate with: npx web-push generate-vapid-keys */
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().default('mailto:labpass@ictuniversity.example'),
+    /** Optional Expo push access token (Android app notifications). */
+    EXPO_ACCESS_TOKEN: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
