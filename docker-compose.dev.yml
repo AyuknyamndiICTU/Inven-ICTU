@@ -1,0 +1,51 @@
+# LabPass local development services. Ports are chosen to avoid clashes with other projects on this machine.
+name: labpass-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: labpass-postgres
+    environment:
+      POSTGRES_USER: labpass
+      POSTGRES_PASSWORD: labpass_dev_only
+      POSTGRES_DB: labpass
+    ports:
+      - '127.0.0.1:5440:5432'
+    volumes:
+      - labpass-pg:/var/lib/postgresql/data
+      - ./scripts/db/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U labpass -d labpass']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: labpass-redis
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '127.0.0.1:6390:6379'
+    volumes:
+      - labpass-redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: labpass-mailpit
+    ports:
+      - '127.0.0.1:1026:1025'
+      - '127.0.0.1:8026:8025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  labpass-pg:
+  labpass-redis:

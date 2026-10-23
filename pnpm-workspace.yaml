@@ -1,0 +1,17 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm 11: packages allowed to run install scripts (native binaries / engine downloads).
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@swc/core': true
+  electron: true
+  esbuild: true
+  msgpackr-extract: false
+  prisma: true
+  simple-git-hooks: true
+
+# Flat node_modules: Electron packaging, Expo/Metro and Prisma are most reliable with a hoisted layout.
+nodeLinker: hoisted

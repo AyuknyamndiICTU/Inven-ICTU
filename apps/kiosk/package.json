@@ -1,0 +1,38 @@
+{
+  "name": "@labpass/kiosk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LabPass Cisco lab kiosk (Electron)",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@labpass/design-tokens": "workspace:*",
+    "@labpass/i18n": "workspace:*",
+    "@labpass/motion": "workspace:*",
+    "@fontsource-variable/inter": "^5.2.0",
+    "@fontsource-variable/jetbrains-mono": "^5.2.0",
+    "@fontsource-variable/unbounded": "^5.2.0",
+    "motion": "^12.23.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/node": "^22.18.0",
+    "@types/react": "~19.1.0",
+    "@types/react-dom": "~19.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "^38.2.0",
+    "electron-vite": "^4.0.1",
+    "tailwindcss": "^4.1.0",
+    "vite": "^7.1.0",
+    "vitest": "^3.2.4"
+  }
+}
