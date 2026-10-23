@@ -13,11 +13,12 @@
     "lint": "eslint src test",
     "typecheck": "prisma generate && tsc --noEmit",
     "test": "prisma generate && vitest run",
-    "db:migrate": "prisma migrate deploy",
-    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate": "node scripts/prisma.cjs migrate deploy",
+    "db:migrate:dev": "node scripts/prisma.cjs migrate dev",
     "db:seed": "node -r @swc-node/register prisma/seed.ts",
     "ops:reconcile": "node -r @swc-node/register src/ops/reconcile.cli.ts",
-    "bench:import": "node -r @swc-node/register test/bench/import.bench.ts"
+    "bench:import": "node -r @swc-node/register test/bench/import.bench.ts",
+    "db:studio": "node scripts/prisma.cjs studio"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"

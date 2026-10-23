@@ -8,3 +8,6 @@ pnpm-lock.yaml
 plans/ictu-labpass/references
 docs/evidence/**/*.png
 *.mp4
+packages/contracts/openapi.json
+packages/contracts/tap-protocol/vectors.json
+apps/api/prisma/migrations/**/*.sql

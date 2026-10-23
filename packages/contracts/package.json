@@ -1,0 +1,66 @@
+{
+  "name": "@labpass/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LabPass API contract (zod route registry → OpenAPI), socket events and ICTU Tap Protocol v1",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./tap": {
+      "import": {
+        "types": "./dist/tap/index.d.ts",
+        "default": "./dist/tap/index.js"
+      },
+      "require": {
+        "types": "./dist/tap/index.d.cts",
+        "default": "./dist/tap/index.cjs"
+      }
+    },
+    "./tap-node": {
+      "import": {
+        "types": "./dist/tap/node.d.ts",
+        "default": "./dist/tap/node.js"
+      },
+      "require": {
+        "types": "./dist/tap/node.d.cts",
+        "default": "./dist/tap/node.cjs"
+      }
+    },
+    "./openapi.json": "./openapi.json",
+    "./vectors.json": "./tap-protocol/vectors.json"
+  },
+  "files": [
+    "dist",
+    "openapi.json",
+    "tap-protocol"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint src scripts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "generate": "pnpm build && node scripts/openapi.mjs write",
+    "check": "pnpm build && node scripts/openapi.mjs check",
+    "vectors": "pnpm build && node scripts/gen-vectors.mjs"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "tsup": "^8.5.0",
+    "vitest": "^3.2.4"
+  }
+}

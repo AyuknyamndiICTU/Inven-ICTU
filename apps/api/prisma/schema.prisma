@@ -1,0 +1,697 @@
+// LabPass data model (ARCH §4). Tables are snake_case (via @@map); columns keep Prisma camelCase
+// and are quoted in hand-written SQL. Invariants that Prisma cannot express (CHECKs, partial unique
+// indexes, append-only triggers, pg_trgm) live in the migration SQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum AdminRole {
+  SUPER_ADMIN
+  LAB_ADMIN
+  LAB_ASSISTANT
+  VIEWER
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum CardTech {
+  DESFIRE_EV3
+  OTHER
+}
+
+enum BindingStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum BindingSource {
+  SUPPLIER_FILE
+  SIS
+  OTP
+  ADMIN
+}
+
+enum CredentialKind {
+  DEVICE_KEY
+  PASSKEY
+}
+
+enum CredentialPlatform {
+  ANDROID_APP
+  WEB
+}
+
+enum CredentialStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+  REJECTED
+}
+
+enum RequestDecision {
+  AUTO_APPROVED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EnrollmentStatus {
+  STARTED
+  OTP_SENT
+  OTP_VERIFIED
+  REVIEW
+  COMPLETED
+  EXPIRED
+}
+
+enum MovementType {
+  RESTOCK
+  WRITE_OFF
+  CORRECTION
+  ISSUE
+  RETURN
+  DAMAGED
+  LOST
+}
+
+enum ActorType {
+  ADMIN
+  KIOSK
+  STUDENT
+  SYSTEM
+}
+
+enum LoanStatus {
+  OPEN
+  CLOSED
+}
+
+enum IdentifyMethod {
+  CARD
+  HCE
+  SCAN
+  MANUAL
+}
+
+enum ManualVerification {
+  PIN
+  OTP
+  ASSISTANT
+  OPEN
+}
+
+enum KioskStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+enum ImportSource {
+  FILE
+  REST
+}
+
+enum ImportKind {
+  STUDENTS
+  CARD_BATCH
+}
+
+enum ImportStatus {
+  PREVIEW
+  COMMITTING
+  COMMITTED
+  ROLLED_BACK
+  FAILED
+}
+
+enum ImportChangeType {
+  CREATE
+  UPDATE
+  DEACTIVATE
+  BIND_CARD
+  REVOKE_CARD
+}
+
+enum AlertSeverity {
+  LOW
+  OUT
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  DEAD
+}
+
+enum PushKind {
+  EXPO
+  WEBPUSH
+}
+
+enum LinkRequestStatus {
+  PENDING_OTP
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum SyncConflictReason {
+  INSUFFICIENT_STOCK
+  CREDENTIAL_REVOKED
+  STUDENT_INACTIVE
+  BUNDLE_EXPIRED
+  INVALID_EVIDENCE
+  UNKNOWN_LINE
+}
+
+enum SyncConflictResolution {
+  ACCEPTED
+  VOIDED
+}
+
+// ───────────────────────────── Identity ─────────────────────────────
+
+model Student {
+  id            String        @id @default(uuid()) @db.Uuid
+  matricule     String        @unique
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String?
+  dateOfBirth   DateTime      @db.Date
+  program       String?
+  level         String?
+  status        StudentStatus @default(ACTIVE)
+  sisExternalId String?
+  sourceHash    String?
+  photoKey      String?
+  manualPinHash String?
+  pinFailures   Int           @default(0)
+  pinLockedUntil DateTime?
+  syncedAt      DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  cards              CardBinding[]
+  credentials        MobileCredential[]
+  loans              Loan[]
+  pushTokens         PushToken[]
+  refreshTokens      StudentRefreshToken[]
+  credentialRequests CredentialRequest[]
+
+  @@index([status])
+  @@map("students")
+}
+
+model DirectoryImport {
+  id                String       @id @default(uuid()) @db.Uuid
+  kind              ImportKind   @default(STUDENTS)
+  source            ImportSource @default(FILE)
+  fileName          String?
+  storageKey        String?
+  status            ImportStatus @default(PREVIEW)
+  mapping           Json?
+  counts            Json         @default("{}")
+  deactivateMissing Boolean      @default(false)
+  actorId           String?      @db.Uuid
+  createdAt         DateTime     @default(now())
+  committedAt       DateTime?
+  rolledBackAt      DateTime?
+  error             String?
+
+  issues  DirectoryImportIssue[]
+  changes DirectoryImportChange[]
+
+  @@index([createdAt])
+  @@map("directory_imports")
+}
+
+model DirectoryImportIssue {
+  id       String          @id @default(uuid()) @db.Uuid
+  importId String          @db.Uuid
+  row      Int
+  field    String?
+  message  String
+  import   DirectoryImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([importId])
+  @@map("directory_import_issues")
+}
+
+model DirectoryImportChange {
+  id            String           @id @default(uuid()) @db.Uuid
+  importId      String           @db.Uuid
+  changeType    ImportChangeType
+  studentId     String?          @db.Uuid
+  cardBindingId String?          @db.Uuid
+  before        Json?
+  after         Json?
+  createdAt     DateTime         @default(now())
+  import        DirectoryImport  @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([importId])
+  @@map("directory_import_changes")
+}
+
+model CardBinding {
+  id           String        @id @default(uuid()) @db.Uuid
+  studentId    String        @db.Uuid
+  uidHmac      String
+  uidSuffix    String?
+  cardTech     CardTech      @default(OTHER)
+  keyVersion   Int?
+  status       BindingStatus @default(ACTIVE)
+  createdVia   BindingSource
+  authFailures Int           @default(0)
+  createdAt    DateTime      @default(now())
+  revokedAt    DateTime?
+  student      Student       @relation(fields: [studentId], references: [id])
+
+  @@index([studentId])
+  @@index([uidHmac])
+  @@map("card_bindings")
+}
+
+model CardLinkRequest {
+  id          String            @id @default(uuid()) @db.Uuid
+  uidHmac     String
+  uidSuffix   String?
+  matricule   String
+  studentId   String?           @db.Uuid
+  kioskId     String?           @db.Uuid
+  status      LinkRequestStatus
+  otpHash     String?
+  otpAttempts Int               @default(0)
+  expiresAt   DateTime
+  decidedById String?           @db.Uuid
+  decidedAt   DateTime?
+  createdAt   DateTime          @default(now())
+
+  @@index([status])
+  @@map("card_link_requests")
+}
+
+model EnrollmentSession {
+  id                   String           @id @default(uuid()) @db.Uuid
+  matricule            String
+  studentId            String?          @db.Uuid
+  submitted            Json
+  matchResult          Json
+  allMatch             Boolean
+  otpHash              String?
+  otpChannel           String?
+  otpDestinationMasked String?
+  otpAttempts          Int              @default(0)
+  otpSentAt            DateTime?
+  otpVerifiedAt        DateTime?
+  popNonce             String?
+  pollTokenHash        String?
+  webauthnChallenge    String?
+  status               EnrollmentStatus @default(STARTED)
+  deviceFingerprint    String?
+  credentialId         String?          @db.Uuid
+  expiresAt            DateTime
+  createdAt            DateTime         @default(now())
+
+  @@index([matricule, createdAt])
+  @@map("enrollment_sessions")
+}
+
+model MobileCredential {
+  id                   String             @id @default(uuid()) @db.Uuid
+  studentId            String             @db.Uuid
+  kind                 CredentialKind
+  platform             CredentialPlatform
+  capabilities         Json               @default("{}")
+  deviceLabel          String?
+  status               CredentialStatus   @default(PENDING)
+  publicKeySpki        Bytes?
+  attestation          Json?
+  webauthnCredentialId String?            @unique
+  cosePublicKey        Bytes?
+  signCount            Int                @default(0)
+  backupEligible       Boolean?
+  backedUp             Boolean?
+  transports           String[]           @default([])
+  tokenFamilyId        String?
+  createdAt            DateTime           @default(now())
+  activatedAt          DateTime?
+  revokedAt            DateTime?
+  revokedReason        String?
+  student              Student            @relation(fields: [studentId], references: [id])
+  request              CredentialRequest?
+
+  @@index([studentId])
+  @@map("mobile_credentials")
+}
+
+model CredentialRequest {
+  id                  String           @id @default(uuid()) @db.Uuid
+  enrollmentSessionId String           @unique @db.Uuid
+  credentialId        String           @unique @db.Uuid
+  studentId           String?          @db.Uuid
+  decision            RequestDecision
+  matchResult         Json
+  reviewerId          String?          @db.Uuid
+  verifiedInPerson    Boolean          @default(false)
+  reason              String?
+  createdAt           DateTime         @default(now())
+  decidedAt           DateTime?
+  credential          MobileCredential @relation(fields: [credentialId], references: [id])
+  student             Student?         @relation(fields: [studentId], references: [id])
+
+  @@index([decision, createdAt])
+  @@map("credential_requests")
+}
+
+model StudentRefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  studentId    String    @db.Uuid
+  credentialId String    @db.Uuid
+  familyId     String
+  tokenHash    String    @unique
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  usedAt       DateTime?
+  revokedAt    DateTime?
+  student      Student   @relation(fields: [studentId], references: [id])
+
+  @@index([familyId])
+  @@map("student_refresh_tokens")
+}
+
+model PushToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  studentId  String   @db.Uuid
+  kind       PushKind
+  token      String   @unique
+  platform   String
+  lastSeenAt DateTime @default(now())
+  student    Student  @relation(fields: [studentId], references: [id])
+
+  @@index([studentId])
+  @@map("push_tokens")
+}
+
+// ───────────────────────────── Inventory ─────────────────────────────
+
+model EquipmentCategory {
+  id        String      @id @default(uuid()) @db.Uuid
+  name      String      @unique
+  icon      String?
+  sortOrder Int         @default(0)
+  equipment Equipment[]
+
+  @@map("equipment_categories")
+}
+
+model Equipment {
+  id                String            @id @default(uuid()) @db.Uuid
+  code              String            @unique
+  name              String
+  categoryId        String            @db.Uuid
+  description       String?
+  imageKey          String?
+  unit              String            @default("unit")
+  totalQuantity     Int               @default(0)
+  availableQuantity Int               @default(0)
+  lowStockThreshold Int?
+  active            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  category          EquipmentCategory @relation(fields: [categoryId], references: [id])
+  movements         StockMovement[]
+  loanLines         LoanLine[]
+  alertOccurrences  AlertOccurrence[]
+
+  @@index([categoryId])
+  @@map("equipment")
+}
+
+model StockMovement {
+  id            String       @id @default(uuid()) @db.Uuid
+  equipmentId   String       @db.Uuid
+  type          MovementType
+  delta         Int
+  totalDelta    Int          @default(0)
+  actorType     ActorType
+  actorId       String?
+  loanLineId    String?      @db.Uuid
+  kioskId       String?      @db.Uuid
+  reason        String?
+  compensatesId String?      @db.Uuid
+  createdAt     DateTime     @default(now())
+  equipment     Equipment    @relation(fields: [equipmentId], references: [id])
+
+  @@index([equipmentId, createdAt])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+// ───────────────────────────── Lending ─────────────────────────────
+
+model Loan {
+  id                 String              @id @default(uuid()) @db.Uuid
+  studentId          String              @db.Uuid
+  kioskId            String?             @db.Uuid
+  identifyMethod     IdentifyMethod
+  manualVerification ManualVerification?
+  offline            Boolean             @default(false)
+  openedAt           DateTime            @default(now())
+  occurredAt         DateTime?
+  dueAt              DateTime
+  closedAt           DateTime?
+  status             LoanStatus          @default(OPEN)
+  overdueNotifiedAt  DateTime?
+  student            Student             @relation(fields: [studentId], references: [id])
+  lines              LoanLine[]
+
+  @@index([status, dueAt])
+  @@index([studentId, status])
+  @@map("loans")
+}
+
+model LoanLine {
+  id          String    @id @default(uuid()) @db.Uuid
+  loanId      String    @db.Uuid
+  equipmentId String    @db.Uuid
+  qtyIssued   Int
+  qtyReturned Int       @default(0)
+  qtyDamaged  Int       @default(0)
+  qtyLost     Int       @default(0)
+  needsReview Boolean   @default(false)
+  loan        Loan      @relation(fields: [loanId], references: [id])
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@index([loanId])
+  @@index([equipmentId])
+  @@map("loan_lines")
+}
+
+// ───────────────────────────── Platform ─────────────────────────────
+
+model Kiosk {
+  id                    String      @id @default(uuid()) @db.Uuid
+  name                  String
+  location              String?
+  tokenHash             String?     @unique
+  registrationCodeHash  String?
+  registrationExpiresAt DateTime?
+  status                KioskStatus @default(PENDING)
+  lastSeenAt            DateTime?
+  appVersion            String?
+  readerStatus          String?
+  createdAt             DateTime    @default(now())
+  offlineKeys           KioskOfflineKey[]
+
+  @@map("kiosks")
+}
+
+model AdminUser {
+  id                 String    @id @default(uuid()) @db.Uuid
+  email              String    @unique
+  name               String
+  role               AdminRole
+  passwordHash       String
+  totpSecretEnc      String?
+  totpEnabled        Boolean   @default(false)
+  phoneE164          String?
+  phoneVerifiedAt    DateTime?
+  whatsappE164       String?
+  whatsappVerifiedAt DateTime?
+  assistantPinHash   String?
+  notificationPrefs  Json      @default("{}")
+  active             Boolean   @default(true)
+  failedLogins       Int       @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("admin_users")
+}
+
+model Setting {
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?  @db.Uuid
+
+  @@map("settings")
+}
+
+model IdempotencyKey {
+  id             String   @id @default(uuid()) @db.Uuid
+  scope          String
+  key            String
+  requestHash    String
+  status         String
+  responseStatus Int?
+  responseBody   Json?
+  createdAt      DateTime @default(now())
+
+  @@unique([scope, key])
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}
+
+model OutboxEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  type        String
+  payload     Json
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
+  attempts    Int       @default(0)
+
+  @@index([publishedAt, createdAt])
+  @@map("outbox_events")
+}
+
+model ConsumerInbox {
+  consumer    String
+  eventId     String   @db.Uuid
+  processedAt DateTime @default(now())
+
+  @@id([consumer, eventId])
+  @@map("consumer_inbox")
+}
+
+model AuditLog {
+  id        String    @id @default(uuid()) @db.Uuid
+  actorType ActorType
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  diff      Json?
+  ip        String?
+  at        DateTime  @default(now())
+
+  @@index([entity, entityId])
+  @@index([at])
+  @@map("audit_logs")
+}
+
+// ───────────────────────────── Notification ─────────────────────────────
+
+model AlertOccurrence {
+  id              String        @id @default(uuid()) @db.Uuid
+  equipmentId     String        @db.Uuid
+  severity        AlertSeverity
+  threshold       Int
+  availableAtFire Int
+  firedAt         DateTime      @default(now())
+  resolvedAt      DateTime?
+  equipment       Equipment     @relation(fields: [equipmentId], references: [id])
+  notifications   NotificationLog[]
+
+  @@index([equipmentId, firedAt])
+  @@map("alert_occurrences")
+}
+
+model NotificationLog {
+  id                String              @id @default(uuid()) @db.Uuid
+  occurrenceId      String?             @db.Uuid
+  channel           NotificationChannel
+  recipientMasked   String
+  template          String
+  status            NotificationStatus  @default(QUEUED)
+  providerMessageId String?
+  attempts          Int                 @default(0)
+  error             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  occurrence        AlertOccurrence?    @relation(fields: [occurrenceId], references: [id])
+
+  @@index([createdAt])
+  @@index([providerMessageId])
+  @@map("notification_logs")
+}
+
+// ───────────────────────────── Offline (S11.5) ─────────────────────────────
+
+model KioskOfflineKey {
+  id         String   @id @default(uuid()) @db.Uuid
+  kioskId    String   @db.Uuid
+  keyVersion Int
+  keyEnc     String
+  createdAt  DateTime @default(now())
+  kiosk      Kiosk    @relation(fields: [kioskId], references: [id])
+
+  @@unique([kioskId, keyVersion])
+  @@map("kiosk_offline_keys")
+}
+
+model OfflineSyncBatch {
+  id          String                @id @default(uuid()) @db.Uuid
+  kioskId     String                @db.Uuid
+  offlineFrom DateTime
+  offlineTo   DateTime
+  txCount     Int
+  applied     Int                   @default(0)
+  conflicts   Int                   @default(0)
+  createdAt   DateTime              @default(now())
+  items       OfflineSyncConflict[]
+
+  @@map("offline_sync_batches")
+}
+
+model OfflineSyncConflict {
+  id          String                  @id @default(uuid()) @db.Uuid
+  batchId     String                  @db.Uuid
+  offlineTxId String
+  reason      SyncConflictReason
+  payload     Json
+  resolution  SyncConflictResolution?
+  resolverId  String?                 @db.Uuid
+  note        String?
+  createdAt   DateTime                @default(now())
+  resolvedAt  DateTime?
+  batch       OfflineSyncBatch        @relation(fields: [batchId], references: [id])
+
+  @@unique([offlineTxId])
+  @@index([resolution])
+  @@map("offline_sync_conflicts")
+}
