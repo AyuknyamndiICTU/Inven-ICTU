@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "warning": "TEST-ONLY KEYS. Never use outside automated tests and the FakeReader.",
+  "ids": {
+    "kioskId": "7f3a2c10-5b8e-4d21-9a6c-0e4b1d2f3a45",
+    "otherKioskId": "0d9e8c7b-6a5f-4e3d-8c2b-1a0f9e8d7c6b",
+    "credentialId": "3c1d9e2a-8b7f-4a6e-9d5c-4b3a2f1e0d9c",
+    "sessionId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+  },
+  "keys": {
+    "device1": {
+      "spki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkiERLVm-PAJNnvRUP82LP4ptYS3o9Vn5paMTQcJTNncBXfaNsxOYS30G452D7LN6ksqSylkUPVu6Dnyw3Tbi6Q",
+      "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPSwiLxbru1d0USOqHkg5AE-KQ4pLl_atunK2fpiXIzmhRANCAASSIREtWb48Ak2e9FQ_zYs_im1hLej1WfmloxNBwlM2dwFd9o2zE5hLfQbjnYPss3qSypLKWRQ9W7oOfLDdNuLp"
+    },
+    "device2": {
+      "spki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQqf4thjibtwFTPYjPKb3QxE0MYS72EQcXPSVRIK4PwyqwTe3F6ZRnQUDgAJCXpff0c-NWcRcq9eO8ij-R2fp4Q",
+      "pkcs8": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgrqwyqp8_EJSHgyWYtc8GaH22DkRQTyYTz0aHKCfHgOmhRANCAARCp_i2GOJu3AVM9iM8pvdDETQxhLvYRBxc9JVEgrg_DKrBN7cXplGdBQOAAkJel9_Rz41ZxFyr147yKP5HZ-nh"
+    }
+  },
+  "apdu": {
+    "select": "00A4040008F0494354554C500100",
+    "selectResponse": "013C1D9E2A8B7F4A6E9D5C4B3A2F1E0D9C9000",
+    "selectResponseNotEnrolled": "6A82",
+    "sign": "8010000028031425364758697A8B9CADBECFE0F1027F3A2C105B8E4D219A6C0E4B1D2F3A45000001A17720CA0000",
+    "signResponse": "3044022067369B3D3DE8C6419CFEC53AEC08690C8998A6DA350077E67B3CE1917AE0114402204066928D4906169555033CEA615A35DEE0339C67D9DF7FFC3A092A0F58B76B3F9000"
+  },
+  "signatures": [
+    {
+      "name": "valid HCE",
+      "type": "HCE",
+      "key": "device1",
+      "credentialId": "3c1d9e2a-8b7f-4a6e-9d5c-4b3a2f1e0d9c",
+      "kioskId": "7f3a2c10-5b8e-4d21-9a6c-0e4b1d2f3a45",
+      "nonce": "AxQlNkdYaXqLnK2-z-DxAg",
+      "ts": 1793000000000,
+      "signature": "MEQCIGc2mz096MZBnP7FOuwIaQyJmKbaNQB35ns84ZF64BFEAiBAZpKNSQYWlVUDPOphWjXe4DOcZ9nff_w6CSoPWLdrPw",
+      "expect": true
+    },
+    {
+      "name": "HCE claimed for another kiosk",
+      "type": "HCE",
+      "key": "device1",
+      "credentialId": "3c1d9e2a-8b7f-4a6e-9d5c-4b3a2f1e0d9c",
+      "kioskId": "0d9e8c7b-6a5f-4e3d-8c2b-1a0f9e8d7c6b",
+      "nonce": "AxQlNkdYaXqLnK2-z-DxAg",
+      "ts": 1793000000000,
+      "signature": "MEQCIGc2mz096MZBnP7FOuwIaQyJmKbaNQB35ns84ZF64BFEAiBAZpKNSQYWlVUDPOphWjXe4DOcZ9nff_w6CSoPWLdrPw",
+      "expect": false
+    },
+    {
+      "name": "HCE with a different timestamp",
+      "type": "HCE",
+      "key": "device1",
+      "credentialId": "3c1d9e2a-8b7f-4a6e-9d5c-4b3a2f1e0d9c",
+      "kioskId": "7f3a2c10-5b8e-4d21-9a6c-0e4b1d2f3a45",
+      "nonce": "AxQlNkdYaXqLnK2-z-DxAg",
+      "ts": 1793000000001,
+      "signature": "MEQCIGc2mz096MZBnP7FOuwIaQyJmKbaNQB35ns84ZF64BFEAiBAZpKNSQYWlVUDPOphWjXe4DOcZ9nff_w6CSoPWLdrPw",
+      "expect": false
+    },
+    {
+      "name": "HCE signed by another device",
+      "type": "HCE",
+      "key": "device1",
+      "credentialId": "3c1d9e2a-8b7f-4a6e-9d5c-4b3a2f1e0d9c",
+      "kioskId": "7f3a2c10-5b8e-4d21-9a6c-0e4b1d2f3a45",
+      "nonce": "AxQlNkdYaXqLnK2-z-DxAg",
+      "ts": 1793000000000,
+      "signature": "MEYCIQCKERNOQU2MD0jEJulgYrCQNvARO5wHdwCk4DDTWaGCyQIhAMXVD3lRoROBRsVW_qB-mUoH8jXqLljbqL2tyyREzTfb",
+      "expect": false
+    },
+    {
+      "name": "valid SCAN",
+      "type": "SCAN",
+      "key": "device1",
+      "credentialId": "3c1d9e2a-8b7f-4a6e-9d5c-4b3a2f1e0d9c",
+      "kioskId": "7f3a2c10-5b8e-4d21-9a6c-0e4b1d2f3a45",
+      "nonce": "AxQlNkdYaXqLnK2-z-DxAg",
+      "ts": 1793000000000,
+      "signature": "MEUCIHhNK-vHrQ4nfYgvQsMWCZQDVS1ttcFXn8IE8-JNnyJUAiEA0gVZXFL0Ga_kkC6df0PrVD6Awow7kI3zcVEs2BPPeXo",
+      "expect": true
+    },
+    {
+      "name": "HCE signature replayed as SCAN (domain separation)",
+      "type": "SCAN",
+      "key": "device1",
+      "credentialId": "3c1d9e2a-8b7f-4a6e-9d5c-4b3a2f1e0d9c",
+      "kioskId": "7f3a2c10-5b8e-4d21-9a6c-0e4b1d2f3a45",
+      "nonce": "AxQlNkdYaXqLnK2-z-DxAg",
+      "ts": 1793000000000,
+      "signature": "MEQCIGc2mz096MZBnP7FOuwIaQyJmKbaNQB35ns84ZF64BFEAiBAZpKNSQYWlVUDPOphWjXe4DOcZ9nff_w6CSoPWLdrPw",
+      "expect": false
+    }
+  ],
+  "pop": {
+    "sessionId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "popNonce": "AQgPFh0kKzI5QEdOVVxjanF4f4aNlJuiqbC3vsXM09o",
+    "key": "device1",
+    "signature": "MEUCIB4uTQTWKqMfhs6i2jZSewi1jUZPenqj1o8reWUf1CUjAiEA5UFNeU2JCXPK-Ux3Er3dwv5gONMHxTgbNKRrI6eQhTI"
+  },
+  "qr": {
+    "kioskChallenge": "LPK1.fzosEFuOTSGabA5LHS86RQ.AxQlNkdYaXqLnK2-z-DxAg",
+    "deviceKeyResponse": "LPR1.PB2eKot_Sm6dXEs6Lx4NnA.AxQlNkdYaXqLnK2-z-DxAg.1793000000000.MEUCIHhNK-vHrQ4nfYgvQsMWCZQDVS1ttcFXn8IE8-JNnyJUAiEA0gVZXFL0Ga_kkC6df0PrVD6Awow7kI3zcVEs2BPPeXo"
+  },
+  "malformed": [
+    {
+      "name": "SELECT response too short",
+      "kind": "selectResponse",
+      "hex": "019000",
+      "expectError": "BAD_LENGTH"
+    },
+    {
+      "name": "SELECT response wrong version",
+      "kind": "selectResponse",
+      "hex": "023C1D9E2A8B7F4A6E9D5C4B3A2F1E0D9C9000",
+      "expectError": "BAD_VERSION"
+    },
+    {
+      "name": "SELECT not enrolled",
+      "kind": "selectResponse",
+      "hex": "6A82",
+      "expectError": "STATUS_WORD"
+    },
+    {
+      "name": "SIGN response not DER",
+      "kind": "signResponse",
+      "hex": "00112233445566779000",
+      "expectError": "BAD_SIGNATURE_FORMAT"
+    },
+    {
+      "name": "SIGN response locked phone",
+      "kind": "signResponse",
+      "hex": "6982",
+      "expectError": "STATUS_WORD"
+    },
+    {
+      "name": "SIGN command wrong Lc",
+      "kind": "commandApdu",
+      "hex": "8010000027031425364758697A8B9CADBECFE0F1027F3A2C105B8E4D219A6C0E4B1D2F3A45000001A17720CA0000",
+      "expectSw": 26368
+    },
+    {
+      "name": "SIGN command truncated",
+      "kind": "commandApdu",
+      "hex": "8010000028031425364758697A8B9CADBECFE0F1027F3A2C105B8E4D219A",
+      "expectSw": 26368
+    },
+    {
+      "name": "unknown proprietary INS",
+      "kind": "commandApdu",
+      "hex": "8020000000",
+      "expectSw": 27904
+    },
+    {
+      "name": "unknown CLA",
+      "kind": "commandApdu",
+      "hex": "A0A4040000",
+      "expectSw": 28160
+    },
+    {
+      "name": "SELECT other AID",
+      "kind": "commandApdu",
+      "hex": "00A4040007A000000003101000",
+      "expectSw": 27266
+    },
+    {
+      "name": "base64url with padding",
+      "kind": "b64url",
+      "text": "AAAA==",
+      "expectError": "BAD_ENCODING"
+    },
+    {
+      "name": "standard base64 characters",
+      "kind": "b64url",
+      "text": "ab+/",
+      "expectError": "BAD_ENCODING"
+    },
+    {
+      "name": "response QR wrong prefix",
+      "kind": "responseQr",
+      "text": "LPX1.a.b.c.d",
+      "expectError": "BAD_PREFIX"
+    },
+    {
+      "name": "response QR missing field",
+      "kind": "responseQr",
+      "text": "LPR1.AAAAAAAAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAA.123",
+      "expectError": "MALFORMED"
+    },
+    {
+      "name": "kiosk QR short nonce",
+      "kind": "kioskQr",
+      "text": "LPK1.fzosEFuOTSGabA5LHS86RQ.AAAA",
+      "expectError": "BAD_LENGTH"
+    }
+  ],
+  "serverRules": {
+    "hceMaxSkewMs": 30000,
+    "scanMaxSkewMs": 120000,
+    "challengeTtlMs": 60000,
+    "cases": [
+      "valid",
+      "ts skew 31 s (HCE) → STALE",
+      "nonce not issued → UNKNOWN_CHALLENGE",
+      "nonce reused → UNKNOWN_CHALLENGE",
+      "nonce issued to other kiosk → UNKNOWN_CHALLENGE",
+      "credential revoked → CREDENTIAL_INACTIVE"
+    ]
+  }
+}
