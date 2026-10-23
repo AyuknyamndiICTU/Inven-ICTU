@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: labpass
+          POSTGRES_PASSWORD: labpass_dev_only
+          POSTGRES_DB: labpass_test
+        ports: ['5440:5432']
+        options: >-
+          --health-cmd "pg_isready -U labpass" --health-interval 3s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6390:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      CI: 'true'
+      # Tests build connection URLs from these parts (no inline connection strings; see secretlint).
+      LABPASS_DB_HOST: localhost
+      LABPASS_DB_PORT: '5440'
+      LABPASS_DB_USER: labpass
+      LABPASS_DB_PASSWORD: labpass_dev_only
+      LABPASS_REDIS_URL: redis://localhost:6390
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm contracts:check
+      - run: pnpm verify

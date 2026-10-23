@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+**/dist
+**/.next
+**/generated
+**/coverage
+**/android
+**/ios
+plans/ictu-labpass/references
+docs/evidence/**/*.png
+*.mp4
