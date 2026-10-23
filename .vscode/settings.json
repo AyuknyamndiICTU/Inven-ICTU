@@ -1,0 +1,31 @@
+{
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.turbo/**": true,
+    "**/dist/**": true,
+    "**/out/**": true,
+    "**/.next/**": true,
+    "**/.expo/**": true,
+    "**/coverage/**": true,
+    "**/storage/**": true,
+    "**/.test-storage/**": true,
+    "**/android/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.turbo": true,
+    "**/dist": true,
+    "**/.next": true,
+    "**/.expo": true,
+    "**/coverage": true,
+    "pnpm-lock.yaml": true
+  },
+  "files.exclude": {
+    "**/.turbo": true
+  },
+  "typescript.tsserver.maxTsServerMemory": 3072,
+  "typescript.tsserver.watchOptions": {
+    "excludeDirectories": ["**/node_modules", "**/dist", "**/.next", "**/.turbo"]
+  },
+  "typescript.disableAutomaticTypeAcquisition": true
+}

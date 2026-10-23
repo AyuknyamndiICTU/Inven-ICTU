@@ -42,3 +42,6 @@ spikes/**/.pepper
 **/expo-env.d.ts
 .env.local
 
+!.vscode/settings.json
+**/.test-storage/
+**/storage/

@@ -21,7 +21,8 @@ export default defineConfig({
     },
     // Integration tests share one test database, so files run one at a time.
     fileParallelism: false,
-    testTimeout: 30_000,
+    // Generous limits: CI runners and student laptops can be slow; correctness, not speed, is asserted here.
+    testTimeout: 120_000,
     hookTimeout: 120_000,
   },
 });
