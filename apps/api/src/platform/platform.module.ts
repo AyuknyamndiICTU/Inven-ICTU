@@ -24,6 +24,7 @@ import { routeIdOf } from './http/contract';
 import { ProblemFilter } from './http/problem.filter';
 import type { LpRequest } from './http/request';
 import { IdempotencyService, idempotencyKeyOf } from './idempotency/idempotency.service';
+import { JobsService } from './jobs/jobs';
 import { EventBus, InboxService, OutboxRelay, OutboxService } from './outbox/outbox';
 import { PrismaService } from './prisma/prisma.service';
 import { RateLimitGuard, RateLimitService } from './rate-limit/rate-limit';
@@ -57,6 +58,7 @@ const SERVICES = [
   RealtimeService,
   FileUrlService,
   NotificationService,
+  JobsService,
 ];
 
 @Global()

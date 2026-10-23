@@ -87,7 +87,7 @@ export class AuthGuard implements CanActivate {
   }
 
   private async student(req: LpRequest): Promise<boolean> {
-    const claims = this.tokens.verify<{ sub: string; cid: string; fam: string }>('sat', bearer(req));
+    const claims = this.tokens.verify<{ sub: string; cid: string; fam: string; iat?: number }>('sat', bearer(req));
     if (!claims) throw Errors.unauthenticated('Student access token missing or expired.');
     const cred = await this.prisma.mobileCredential.findUnique({
       where: { id: claims.cid },
@@ -98,7 +98,12 @@ export class AuthGuard implements CanActivate {
     }
     if (cred.student.status === 'INACTIVE')
       throw Errors.forbidden('STUDENT_INACTIVE', 'Your student account is not active.');
-    req.student = { studentId: claims.sub, credentialId: claims.cid, familyId: claims.fam };
+    req.student = {
+      studentId: claims.sub,
+      credentialId: claims.cid,
+      familyId: claims.fam,
+      issuedAt: (claims.iat ?? 0) * 1000,
+    };
     return true;
   }
 }

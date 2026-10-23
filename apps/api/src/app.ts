@@ -6,14 +6,25 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import type { DestinationStream } from 'pino';
 import { AuthModule } from './auth/auth.module';
 import { type ApiEnv } from './config/env';
+import { CredentialsModule } from './credentials/credentials.module';
+import { DirectoryModule } from './directory/directory.module';
 import { HealthModule } from './health/health.module';
 import { KiosksModule } from './kiosks/kiosks.module';
 import { createLogger } from './platform/logging/logger';
 import { PlatformModule } from './platform/platform.module';
 import { SettingsModule } from './settings/settings';
+import { StudentsModule } from './students/students.module';
 
-/** Feature modules, in dependency order. Later steps (S05–S11.5) append theirs here. */
-export const FEATURE_MODULES: Array<Type<unknown>> = [HealthModule, SettingsModule, AuthModule, KiosksModule];
+/** Feature modules, in dependency order. Later steps (S06–S11.5) append theirs here. */
+export const FEATURE_MODULES: Array<Type<unknown>> = [
+  HealthModule,
+  SettingsModule,
+  AuthModule,
+  KiosksModule,
+  DirectoryModule,
+  StudentsModule,
+  CredentialsModule,
+];
 
 @Module({})
 export class AppModule {

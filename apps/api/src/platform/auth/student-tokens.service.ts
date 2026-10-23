@@ -18,7 +18,11 @@ export class StudentTokensService {
   ) {}
 
   async issue(studentId: string, credentialId: string, familyId: string, db: Tx | PrismaService = this.prisma) {
-    const access = this.signer.sign('sat', { sub: studentId, cid: credentialId, fam: familyId }, ACCESS_TTL_SEC);
+    const access = this.signer.sign(
+      'sat',
+      { sub: studentId, cid: credentialId, fam: familyId, iat: Math.floor(Date.now() / 1000) },
+      ACCESS_TTL_SEC,
+    );
     const refresh = randomToken(32);
     await db.studentRefreshToken.create({
       data: {

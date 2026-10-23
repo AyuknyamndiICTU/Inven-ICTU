@@ -262,6 +262,8 @@ model DirectoryImportIssue {
 
 model DirectoryImportChange {
   id            String           @id @default(uuid()) @db.Uuid
+  /// Application order; rollback undoes changes in reverse `seq` (createdAt is the same for a whole transaction).
+  seq           Int              @default(autoincrement())
   importId      String           @db.Uuid
   changeType    ImportChangeType
   studentId     String?          @db.Uuid
