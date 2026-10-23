@@ -13,6 +13,8 @@
     "lint": "eslint src test",
     "typecheck": "prisma generate && tsc --noEmit",
     "test": "prisma generate && vitest run",
+    "test:concurrency": "vitest run test/operations/concurrency.test.ts",
+    "test:property": "vitest run test/operations/property.test.ts",
     "db:migrate": "node scripts/prisma.cjs migrate deploy",
     "db:migrate:dev": "node scripts/prisma.cjs migrate dev",
     "db:seed": "node -r @swc-node/register prisma/seed.ts",

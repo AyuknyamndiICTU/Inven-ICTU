@@ -9,13 +9,17 @@ import { type ApiEnv } from './config/env';
 import { CredentialsModule } from './credentials/credentials.module';
 import { DirectoryModule } from './directory/directory.module';
 import { HealthModule } from './health/health.module';
+import { InventoryModule } from './inventory/inventory.module';
 import { KiosksModule } from './kiosks/kiosks.module';
+import { LendingModule } from './lending/lending.module';
+import { OpsModule } from './ops/reconcile';
 import { createLogger } from './platform/logging/logger';
 import { PlatformModule } from './platform/platform.module';
+import { ReportsModule } from './reports/reports.module';
 import { SettingsModule } from './settings/settings';
 import { StudentsModule } from './students/students.module';
 
-/** Feature modules, in dependency order. Later steps (S06–S11.5) append theirs here. */
+/** Feature modules, in dependency order. Later steps (S07–S11.5) append theirs here. */
 export const FEATURE_MODULES: Array<Type<unknown>> = [
   HealthModule,
   SettingsModule,
@@ -24,6 +28,10 @@ export const FEATURE_MODULES: Array<Type<unknown>> = [
   DirectoryModule,
   StudentsModule,
   CredentialsModule,
+  InventoryModule,
+  LendingModule,
+  ReportsModule,
+  OpsModule,
 ];
 
 @Module({})
