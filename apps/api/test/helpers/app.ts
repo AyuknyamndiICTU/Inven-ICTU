@@ -5,12 +5,14 @@ import { Writable } from 'node:stream';
 import { createApp } from '../../src/app';
 import { loadApiEnv, type ApiEnv } from '../../src/config/env';
 import { NotificationService } from '../../src/notifications/core/notification.service';
+import { ProviderConfigService } from '../../src/notifications/core/providers';
 import { AdminSessionService, ADMIN_COOKIE } from '../../src/platform/auth/admin-session.service';
 import { hashSecret } from '../../src/platform/crypto/crypto';
 import { OutboxRelay } from '../../src/platform/outbox/outbox';
 import { PrismaService } from '../../src/platform/prisma/prisma.service';
 import { RedisService } from '../../src/platform/redis/redis.service';
 import { resetDb } from './db';
+import { SettingsService } from '../../src/settings/settings';
 
 export const ADMIN_ORIGIN = 'http://localhost:3100';
 
@@ -76,6 +78,8 @@ export async function bootTestApp(overrides: Record<string, string> = {}): Promi
       await resetDb(prisma);
       await redis.client.flushdb();
       app.get(NotificationService).sentForTest.length = 0;
+      app.get(SettingsService).invalidate();
+      app.get(ProviderConfigService).invalidate();
     },
     close: () => app.close(),
   };

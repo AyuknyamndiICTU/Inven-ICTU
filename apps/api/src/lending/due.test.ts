@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dueAtFor, localDate, startOfLocalDay, zonedTime } from './due';
+import { dueAtFor, localDate, quietDelayMs, startOfLocalDay, zonedTime } from './due';
 
 const closing = { mode: 'LAB_CLOSING' as const, labClosingTime: '18:00', hours: 4, timezone: 'Africa/Douala' };
 
@@ -30,5 +30,15 @@ describe('loan due dates (decision Q4)', () => {
     expect(startOfLocalDay(new Date('2026-11-02T23:30:00Z'), 'Africa/Douala').toISOString()).toBe(
       '2026-11-02T23:00:00.000Z',
     );
+  });
+
+  it('delays until quiet hours end, across midnight', () => {
+    const quiet = { enabled: true, start: '21:00', end: '07:00' };
+    // 22:30 in Douala → 8 h 30 min until 07:00.
+    expect(quietDelayMs(new Date('2026-11-02T21:30:00Z'), quiet, 'Africa/Douala')).toBe(8.5 * 3600_000);
+    // 06:00 in Douala → 1 h.
+    expect(quietDelayMs(new Date('2026-11-03T05:00:00Z'), quiet, 'Africa/Douala')).toBe(3600_000);
+    expect(quietDelayMs(new Date('2026-11-03T11:00:00Z'), quiet, 'Africa/Douala')).toBe(0);
+    expect(quietDelayMs(new Date('2026-11-02T21:30:00Z'), { ...quiet, enabled: false }, 'Africa/Douala')).toBe(0);
   });
 });

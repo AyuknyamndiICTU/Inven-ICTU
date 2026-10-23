@@ -143,3 +143,8 @@ export function signOut(
     payload: { session, lines },
   });
 }
+
+/** Runs the outbox relay until nothing is left (events emitted by consumers are relayed on the next tick). */
+export async function drain(t: TestApp) {
+  for (let i = 0; i < 6 && (await t.relay()) > 0; i++);
+}

@@ -4,6 +4,7 @@ import { type DynamicModule, Module, type Type } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import type { DestinationStream } from 'pino';
+import { AlertsModule } from './alerts/alerts.module';
 import { AuthModule } from './auth/auth.module';
 import { type ApiEnv } from './config/env';
 import { CredentialsModule } from './credentials/credentials.module';
@@ -32,6 +33,7 @@ export const FEATURE_MODULES: Array<Type<unknown>> = [
   LendingModule,
   ReportsModule,
   OpsModule,
+  AlertsModule,
 ];
 
 @Module({})

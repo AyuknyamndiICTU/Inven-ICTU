@@ -9,12 +9,10 @@ import {
 } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { API_ENV, type ApiEnv } from '../config/env';
-import {
-  EmailChannel,
-  MockChannel,
-  NOTIFICATION_CHANNELS,
-  NotificationService,
-} from '../notifications/core/notification.service';
+import { PushStatusChannel, SmsChannel, WhatsAppChannel } from '../notifications/channels/channels';
+import { DeliveryService } from '../notifications/core/delivery';
+import { EmailChannel, NOTIFICATION_CHANNELS, NotificationService } from '../notifications/core/notification.service';
+import { ProviderConfigService } from '../notifications/core/providers';
 import { AdminSessionService } from './auth/admin-session.service';
 import { AuthGuard } from './auth/auth.guard';
 import { StudentTokensService } from './auth/student-tokens.service';
@@ -59,6 +57,8 @@ const SERVICES = [
   FileUrlService,
   NotificationService,
   JobsService,
+  ProviderConfigService,
+  DeliveryService,
 ];
 
 @Global()
@@ -77,11 +77,12 @@ export class PlatformModule {
         { provide: OBJECT_STORAGE, useFactory: () => new LocalDiskStorage(env.STORAGE_DIR) },
         {
           provide: NOTIFICATION_CHANNELS,
-          useFactory: () => [
+          inject: [ProviderConfigService],
+          useFactory: (providers: ProviderConfigService) => [
             new EmailChannel(env),
-            new MockChannel('SMS'),
-            new MockChannel('WHATSAPP'),
-            new MockChannel('PUSH'),
+            new SmsChannel(providers, env),
+            new WhatsAppChannel(providers, env),
+            new PushStatusChannel(),
           ],
         },
         ...SERVICES,
