@@ -39,7 +39,7 @@ export interface RouteSpec {
   /** Writes an AuditLog entry (invariant I7). */
   audited?: boolean;
   bodyKind?: 'json' | 'binary';
-  responseKind?: 'json' | 'csv' | 'empty' | 'text';
+  responseKind?: 'json' | 'csv' | 'empty' | 'text' | 'binary';
   rateLimit?: RateLimit;
 }
 
@@ -63,6 +63,17 @@ export const routes = def({
     tag: 'platform',
     summary: 'Readiness (DB + Redis)',
     response: z.object({ status: z.literal('ready'), db: z.boolean(), redis: z.boolean() }),
+  },
+  'files.get': {
+    method: 'GET',
+    path: '/files/:key',
+    auth: 'public',
+    tag: 'platform',
+    summary: 'Download a stored file via a signed URL',
+    params: z.object({ key: z.string().regex(/^[A-Za-z0-9._-]{8,200}$/) }),
+    query: z.object({ exp: z.coerce.number().int(), sig: z.string().min(16).max(128) }),
+    response: null,
+    responseKind: 'binary',
   },
   'meta.appConfig': {
     method: 'GET',

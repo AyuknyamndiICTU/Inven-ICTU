@@ -115,6 +115,7 @@ export function createApiClient(opts: ApiClientOptions) {
     }
     if (res.status === 204 || spec.responseKind === 'empty') return undefined as RouteOutput<Id>;
     if (spec.responseKind === 'csv' || spec.responseKind === 'text') return (await res.text()) as RouteOutput<Id>;
+    if (spec.responseKind === 'binary') return (await res.blob()) as RouteOutput<Id>;
     const data: unknown = await res.json();
     if (opts.validateResponses && spec.response) return spec.response.parse(data) as RouteOutput<Id>;
     return data as RouteOutput<Id>;

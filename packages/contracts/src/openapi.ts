@@ -66,12 +66,17 @@ export function buildOpenApi(version = '0.1.0'): Json {
         ? { description: 'No content' }
         : r.responseKind === 'csv'
           ? { description: 'CSV file', content: { 'text/csv': { schema: { type: 'string' } } } }
-          : r.responseKind === 'text'
-            ? { description: 'Plain text', content: { 'text/plain': { schema: { type: 'string' } } } }
-            : {
-                description: 'OK',
-                content: { 'application/json': { schema: r.response ? toSchema(r.response, 'output') : {} } },
-              };
+          : r.responseKind === 'binary'
+            ? {
+                description: 'File',
+                content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } },
+              }
+            : r.responseKind === 'text'
+              ? { description: 'Plain text', content: { 'text/plain': { schema: { type: 'string' } } } }
+              : {
+                  description: 'OK',
+                  content: { 'application/json': { schema: r.response ? toSchema(r.response, 'output') : {} } },
+                };
     const op: Json = {
       operationId: id,
       summary: r.summary,
