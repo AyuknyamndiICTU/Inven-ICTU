@@ -6,6 +6,7 @@ import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sig
 import { hceMessage, passkeyChallengeInput, popMessage, scanMessage } from './protocol';
 
 export * from './index';
+export * from './desfire';
 
 /** Verifies an ECDSA P-256/SHA-256 DER signature against a DER SubjectPublicKeyInfo. Never throws on bad input. */
 export function verifyDerSignature(spkiDer: Uint8Array, message: Uint8Array, derSignature: Uint8Array): boolean {

@@ -10520,6 +10520,18 @@
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
                           },
+                          "keyVersion": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -10545,6 +10557,7 @@
                           "status",
                           "createdVia",
                           "authFailures",
+                          "keyVersion",
                           "createdAt",
                           "revokedAt"
                         ],
@@ -10837,6 +10850,18 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "keyVersion": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -10862,6 +10887,7 @@
                     "status",
                     "createdVia",
                     "authFailures",
+                    "keyVersion",
                     "createdAt",
                     "revokedAt"
                   ],
@@ -10976,6 +11002,18 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "keyVersion": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -11001,6 +11039,7 @@
                     "status",
                     "createdVia",
                     "authFailures",
+                    "keyVersion",
                     "createdAt",
                     "revokedAt"
                   ],
