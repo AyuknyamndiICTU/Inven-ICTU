@@ -41,6 +41,39 @@ export function startOfLocalDay(date: Date, timeZone: string): Date {
   return zonedTime(p.y, p.m, p.d, 0, 0, timeZone);
 }
 
+/** Local wall-clock minutes since midnight (0–1439). */
+export function localMinutes(date: Date, timeZone: string): number {
+  const p = parts(date, timeZone);
+  return p.hh * 60 + p.mm;
+}
+
+/** Local "HH:MM, DD/MM" for messages. */
+export function localShort(date: Date, timeZone: string): string {
+  const p = parts(date, timeZone);
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${two(p.hh)}:${two(p.mm)}, ${two(p.d)}/${two(p.m)}`;
+}
+
+/**
+ * Milliseconds until a quiet-hours window ends, or 0 outside it. Windows may cross midnight ("21:00"–"07:00").
+ */
+export function quietDelayMs(
+  now: Date,
+  quiet: { enabled: boolean; start: string; end: string },
+  timeZone: string,
+): number {
+  if (!quiet.enabled) return 0;
+  const toMin = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map(Number) as [number, number];
+    return h * 60 + m;
+  };
+  const [s, e, m] = [toMin(quiet.start), toMin(quiet.end), localMinutes(now, timeZone)];
+  if (s === e) return 0;
+  const inside = s < e ? m >= s && m < e : m >= s || m < e;
+  if (!inside) return 0;
+  return (((e - m + 1440) % 1440) * 60 - now.getUTCSeconds()) * 1000;
+}
+
 export type LoanDuePolicy = { mode: 'LAB_CLOSING' | 'HOURS'; labClosingTime: string; hours: number; timezone: string };
 
 /**

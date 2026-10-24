@@ -55,6 +55,8 @@ export const apiEnvSchema = z
     VAPID_SUBJECT: z.string().default('mailto:labpass@ictuniversity.example'),
     /** Optional Expo push access token (Android app notifications). */
     EXPO_ACCESS_TOKEN: z.string().optional(),
+    /** WhatsApp Cloud API base (tests point it at a local fake). */
+    WHATSAPP_GRAPH_URL: z.string().default('https://graph.facebook.com/v21.0'),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
