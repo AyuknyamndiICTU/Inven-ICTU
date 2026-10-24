@@ -1,6 +1,6 @@
 import { type AdminRole, maskContact, roleSatisfies } from '@labpass/contracts';
 import { Controller, Inject, Injectable, Module, Req } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type { CardBinding, Prisma } from '@prisma/client';
 import { API_ENV, type ApiEnv } from '../config/env';
 import { uidHmac } from '../platform/crypto/crypto';
 import { Contract, ContractInput, type In } from '../platform/http/contract';
@@ -37,6 +37,20 @@ function credentialDto(c: {
   };
 }
 export { credentialDto };
+
+function cardDto(c: CardBinding) {
+  return {
+    id: c.id,
+    uidSuffix: c.uidSuffix,
+    cardTech: c.cardTech,
+    status: c.status,
+    createdVia: c.createdVia,
+    authFailures: c.authFailures,
+    keyVersion: c.keyVersion,
+    createdAt: c.createdAt.toISOString(),
+    revokedAt: c.revokedAt?.toISOString() ?? null,
+  };
+}
 
 @Injectable()
 export class StudentsService {
@@ -133,16 +147,7 @@ export class StudentsService {
       photoUrl: this.files.url(s.photoKey),
       hasPin: Boolean(s.manualPinHash),
       pinLocked: Boolean(s.pinLockedUntil && s.pinLockedUntil > new Date()),
-      cards: s.cards.map((c) => ({
-        id: c.id,
-        uidSuffix: c.uidSuffix,
-        cardTech: c.cardTech,
-        status: c.status,
-        createdVia: c.createdVia,
-        authFailures: c.authFailures,
-        createdAt: c.createdAt.toISOString(),
-        revokedAt: c.revokedAt?.toISOString() ?? null,
-      })),
+      cards: s.cards.map(cardDto),
       credentials: s.credentials.map(credentialDto),
       createdAt: s.createdAt.toISOString(),
       syncedAt: s.syncedAt?.toISOString() ?? null,
@@ -317,16 +322,7 @@ export class StudentsController {
     const student = await this.prisma.student.findUnique({ where: { id: input.params.id } });
     if (!student) throw Errors.notFound('Student');
     const b = await this.prisma.tx((tx) => this.students.bind(tx, student.id, input.body.uid.toUpperCase(), 'ADMIN'));
-    return {
-      id: b.id,
-      uidSuffix: b.uidSuffix,
-      cardTech: b.cardTech,
-      status: b.status,
-      createdVia: b.createdVia,
-      authFailures: b.authFailures,
-      createdAt: b.createdAt.toISOString(),
-      revokedAt: b.revokedAt?.toISOString() ?? null,
-    };
+    return cardDto(b);
   }
 
   @Contract('cards.revoke')
@@ -335,16 +331,7 @@ export class StudentsController {
       where: { id: input.params.id },
       data: { status: 'REVOKED', revokedAt: new Date() },
     });
-    return {
-      id: b.id,
-      uidSuffix: b.uidSuffix,
-      cardTech: b.cardTech,
-      status: b.status,
-      createdVia: b.createdVia,
-      authFailures: b.authFailures,
-      createdAt: b.createdAt.toISOString(),
-      revokedAt: b.revokedAt?.toISOString() ?? null,
-    };
+    return cardDto(b);
   }
 
   @Contract('cardLinks.list')

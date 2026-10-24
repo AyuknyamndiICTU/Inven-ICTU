@@ -23,6 +23,8 @@ export const CardBindingDto = z.object({
   status: z.enum(['ACTIVE', 'REVOKED']),
   createdVia: z.enum(['SUPPLIER_FILE', 'SIS', 'OTP', 'ADMIN']),
   authFailures: z.int(),
+  /** DESFire key version (ADR-0008); null for UID-only cards. */
+  keyVersion: z.int().nullable(),
   createdAt: IsoDateTime,
   revokedAt: IsoDateTime.nullable(),
 });

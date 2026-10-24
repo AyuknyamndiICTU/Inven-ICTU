@@ -6,6 +6,7 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import type { DestinationStream } from 'pino';
 import { AlertsModule } from './alerts/alerts.module';
 import { AuthModule } from './auth/auth.module';
+import { CardsModule } from './cards/card-auth.module';
 import { type ApiEnv } from './config/env';
 import { CredentialsModule } from './credentials/credentials.module';
 import { DirectoryModule } from './directory/directory.module';
@@ -34,6 +35,7 @@ export const FEATURE_MODULES: Array<Type<unknown>> = [
   ReportsModule,
   OpsModule,
   AlertsModule,
+  CardsModule,
 ];
 
 @Module({})

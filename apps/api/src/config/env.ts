@@ -57,6 +57,9 @@ export const apiEnvSchema = z
     EXPO_ACCESS_TOKEN: z.string().optional(),
     /** WhatsApp Cloud API base (tests point it at a local fake). */
     WHATSAPP_GRAPH_URL: z.string().default('https://graph.facebook.com/v21.0'),
+    /** DESFire LAK master keys, versioned: "1:<32 hex>,2:<32 hex>" (ADR-0008). Prefer the secret file in production. */
+    DESFIRE_LAK_KEYS: z.string().optional(),
+    DESFIRE_KEYS_FILE: z.string().default('/run/secrets/desfire_master_keys'),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
