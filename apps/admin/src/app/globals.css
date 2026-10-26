@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import '@labpass/design-tokens/tokens.css';
 @import '@labpass/design-tokens/theme.css';
+@import '@labpass/ui/styles.css';
 
 @layer base {
   html {
@@ -10,8 +11,188 @@
     color: var(--color-text);
     -webkit-font-smoothing: antialiased;
   }
+  body {
+    min-height: 100dvh;
+  }
   :focus-visible {
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
+  a {
+    color: inherit;
+  }
+}
+
+/* Admin-only pieces that are not part of the shared kit. */
+.lp-skip {
+  position: fixed;
+  left: 12px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--lp-text);
+  color: var(--lp-bg);
+  font-weight: 600;
+}
+.lp-skip:focus {
+  top: 12px;
+}
+.lp-brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #2e333d, #07080a 70%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+.lp-brand-mark::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--lp-signal-300);
+  box-shadow: 0 0 8px var(--lp-signal-500);
+}
+.lp-subnav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: var(--lp-text-muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+.lp-subnav:hover {
+  color: var(--lp-text);
+  background: var(--lp-surface-sunken);
+}
+.lp-subnav.is-active {
+  color: var(--lp-text);
+  box-shadow: inset 0 0 0 1px var(--lp-line);
+  background: var(--lp-surface-raised);
+}
+.lp-select {
+  min-height: 44px;
+  padding: 0 36px 0 14px;
+  border-radius: var(--lp-radius-field);
+  border: 1px solid var(--lp-line);
+  background: var(--lp-surface-raised)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%236B6F76' stroke-width='1.6'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E")
+    no-repeat right 14px center;
+  color: var(--lp-text);
+  font: 500 14px var(--lp-font-sans);
+  appearance: none;
+}
+.lp-select:focus-visible,
+.lp-switch:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--lp-focus);
+  outline-offset: 2px;
+}
+.lp-switch {
+  appearance: none;
+  flex: none;
+  width: 40px;
+  height: 24px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: var(--lp-paper-200);
+  position: relative;
+  cursor: pointer;
+  transition: background-color var(--lp-dur-fast) var(--lp-ease-smooth);
+}
+.lp-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.2);
+  transition: transform var(--lp-dur-fast) var(--lp-ease-smooth);
+}
+.lp-switch:checked {
+  background: var(--lp-accent-fill);
+}
+.lp-switch:checked::after {
+  transform: translateX(16px);
+}
+.lp-textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 10px 14px;
+  border-radius: var(--lp-radius-field);
+  border: 1px solid var(--lp-line);
+  background: var(--lp-surface-raised);
+  color: var(--lp-text);
+  font: 400 14px/1.5 var(--lp-font-sans);
+}
+.lp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--lp-line);
+  background: var(--lp-surface-raised);
+  color: var(--lp-text-muted);
+  font: 600 13px var(--lp-font-sans);
+  cursor: pointer;
+}
+.lp-chip[aria-pressed='true'] {
+  color: var(--lp-bg);
+  background: var(--lp-text);
+  border-color: var(--lp-text);
+}
+.lp-palette {
+  top: 12vh;
+  bottom: auto;
+}
+.lp-diff-bad {
+  color: var(--lp-out-text);
+  font-weight: 600;
+}
+.lp-diff-ok {
+  color: var(--lp-ok-text);
+}
+.lp-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--lp-text);
+}
+
+.lp-num-input {
+  width: 7rem;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: var(--lp-radius-field);
+  border: 1px solid var(--lp-line);
+  background: var(--lp-surface-raised);
+  color: var(--lp-text);
+  font: 600 15px var(--lp-font-mono);
+  text-align: center;
+}
+.lp-num-input--lg {
+  width: 6rem;
+  min-height: 52px;
+  font-size: 22px;
+}
+
+/* Dense tables: smaller status capsules (no ambient effects in tables, DESIGN §1). */
+.lp-table .lp-capsule {
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  backdrop-filter: none;
+}
+.lp-table .lp-capsule svg {
+  width: 13px;
+  height: 13px;
 }

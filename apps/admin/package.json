@@ -11,9 +11,15 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@labpass/contracts": "workspace:*",
     "@labpass/design-tokens": "workspace:*",
     "@labpass/i18n": "workspace:*",
     "@labpass/motion": "workspace:*",
+    "@labpass/ui": "workspace:*",
+    "@tanstack/react-query": "^5.104.5",
+    "cmdk": "^1.1.1",
+    "lucide-react": "^1.61.0",
+    "socket.io-client": "^4.8.1",
     "@fontsource-variable/inter": "^5.2.0",
     "@fontsource-variable/jetbrains-mono": "^5.2.0",
     "@fontsource-variable/unbounded": "^5.2.0",
@@ -29,6 +35,8 @@
     "@types/react-dom": "~19.1.0",
     "postcss": "^8.5.0",
     "tailwindcss": "^4.1.0",
+    "@testing-library/react": "^16.3.0",
+    "jsdom": "^26.1.0",
     "vitest": "^3.2.4"
   }
 }

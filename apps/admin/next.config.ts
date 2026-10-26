@@ -8,7 +8,11 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   // Same-origin API: the browser talks to /api/*, Next proxies to the NestJS API so session cookies stay first-party.
   async rewrites() {
-    return [{ source: '/api/:path*', destination: `${apiOrigin}/:path*` }];
+    return [
+      // Engine.IO only answers on "/socket.io/" (trailing slash); the generic rule below would drop it.
+      { source: '/api/socket.io', destination: `${apiOrigin}/socket.io/` },
+      { source: '/api/:path*', destination: `${apiOrigin}/:path*` },
+    ];
   },
   async headers() {
     return [

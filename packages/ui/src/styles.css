@@ -595,6 +595,7 @@
 /* ───────────── KPI & PIN pad ───────────── */
 .lp-kpi {
   display: grid;
+  align-content: start;
   gap: 6px;
   padding: 18px;
   border: 1px solid var(--lp-line);
@@ -1158,4 +1159,10 @@
     flex-wrap: wrap;
     mask-image: none;
   }
+}
+
+/* ───────────── QR ───────────── */
+.lp-qr {
+  display: block;
+  border-radius: 12px;
 }
