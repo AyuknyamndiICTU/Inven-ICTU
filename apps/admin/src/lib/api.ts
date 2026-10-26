@@ -1,11 +1,10 @@
-import { ApiError, createApiClient, type RouteId, type RouteInput, type RouteOutput } from '@labpass/contracts';
+import { ApiError, createApiClient, type RouteId, type RouteInput, type RouteOutput } from '@labpass/contracts/client';
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 
 /** Same-origin API: the browser calls /api/*, Next rewrites to the NestJS API so the session cookie stays first-party. */
 export const api = createApiClient({
   baseUrl: '/api',
   credentials: 'same-origin',
-  validateResponses: process.env.NODE_ENV !== 'production',
 });
 
 export { ApiError };

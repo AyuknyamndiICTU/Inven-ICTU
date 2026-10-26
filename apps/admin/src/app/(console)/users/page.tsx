@@ -1,6 +1,6 @@
 'use client';
 
-import type { AdminRole } from '@labpass/contracts';
+import type { AdminRole } from '@labpass/contracts/client';
 import { Button, Dialog, Input, StatusCapsule, Table, TBody, Td, Th, THead, Tr, useToast } from '@labpass/ui';
 import { Plus, ShieldCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';

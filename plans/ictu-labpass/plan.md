@@ -37,13 +37,13 @@ Status: ⬜ Not started · 🟨 In progress · ✅ Completed · ⛔ Blocked
 | 2 · Core backend         | [M3 Contract & platform](#m3--contract--platform-s03-s04)                                  | S03, S04          | W3–W5         | 21 / 21      | ✅                   |
 |                          | [M4 Identity & lending engine](#m4--identity--lending-engine-s05--s06)                     | S05, S06          | W6–W8         | 19 / 21      | 🟨                   |
 |                          | [M5 Low-stock alerts](#m5--low-stock-alerts-dev-verified-s07)                              | S07               | W9–W10        | 8 / 11       | 🟨                   |
-| 3 · Design system        | [M6 UI kit & signature theatre](#m6--ui-kit--signature-theatre-s08a-s08b)                  | S08a, S08b        | W3–W7         | 0 / 13       | ⬜                   |
-| 4 · Product surfaces     | [M7 Admin console](#m7--admin-console-s09-s10)                                             | S09, S10          | W9–W13        | 0 / 16       | ⬜                   |
-|                          | [M8 Kiosk app](#m8--kiosk-app-s11-s065-s115)                                               | S11, S06.5, S11.5 | W9–W15        | 0 / 28       | ⬜                   |
+| 3 · Design system        | [M6 UI kit & signature theatre](#m6--ui-kit--signature-theatre-s08a-s08b)                  | S08a, S08b        | W3–W7         | 4 / 13       | 🟨                   |
+| 4 · Product surfaces     | [M7 Admin console](#m7--admin-console-s09-s10)                                             | S09, S10          | W9–W13        | 12 / 16      | 🟨                   |
+|                          | [M8 Kiosk app](#m8--kiosk-app-s11-s065-s115)                                               | S11, S06.5, S11.5 | W9–W15        | 5 / 28       | 🟨                   |
 |                          | [M9 Student app: web + Android](#m9--student-app-web-app--android-nfc-app-s12)             | S12               | W9–W13        | 0 / 11       | ⬜                   |
 | 5 · Hardening            | [M10 Release candidate](#m10--release-candidate-s13)                                       | S13               | W16–W17       | 0 / 10       | ⬜                   |
 | 6 · Launch               | [M11 Production, pilot & go-live](#m11--production-pilot--go-live-s14)                     | S14               | W18–W21       | 0 / 19       | ⬜                   |
-|                          | **Total**                                                                                  | 18 steps          | ~21 weeks     | **78 / 202** |                      |
+|                          | **Total**                                                                                  | 18 steps          | ~21 weeks     | **99 / 202** |                      |
 
 \* Indicative, for a team of 3–4 developers. Phases 2 and 3 run in parallel, and so do M7–M9. The kiosk (M8) runs 2 weeks longer than in v1.1 because of offline mode and DESFire. Refine the dates after M1.
 
@@ -260,29 +260,29 @@ Owner: AyuknyamndiICTU · Started: 2026-10-23 · Completed: —
 
 ### M7 · Admin console (S09, S10)
 
-Owner: — · Started: — · Completed: —
+Owner: AyuknyamndiICTU · Started: 2026-10-24 · Completed: —
 
 **[S09 · Operations](./04-steps-surfaces-release.md#s09--admin-console--operations-inventory-loans-dashboard-kiosks)**, in PR slices
 
-- [ ] (a) Shell: CapsuleNav, role-aware navigation, EN/FR, light/dark, ⌘K palette, realtime cache bridge
-- [ ] (a) Login + TOTP
-- [ ] (b) Dashboard: KPIs, live StockSkyline, activity feed, low stock, kiosks, overdue
-- [ ] (c) Inventory table, **Add/Edit equipment**, **Adjust stock** (+/−) with Undo, movement timeline
-- [ ] (d) Loans (tabs, force-return, export)
-- [ ] (d) Kiosks (register with code + QR, status, revoke); permission screens
-- [ ] **Acceptance:** e2e login → add item → adjust +5/−3 → undo → skyline updates
-- [ ] **Acceptance:** LCP ≤ 2.0 s, INP ≤ 200 ms, route JS ≤ 250 KB; finish gate at 1440x900 and 390x844
+- [x] (a) Shell: CapsuleNav, role-aware navigation, EN/FR, light/dark, ⌘K palette, realtime cache bridge
+- [x] (a) Login + TOTP (enrolment QR, one-step retry on a wrong code)
+- [x] (b) Dashboard: KPIs, live StockSkyline, activity feed, low stock, kiosks, overdue
+- [x] (c) Inventory table, **Add/Edit equipment**, **Adjust stock** (+/−) with Undo, movement timeline
+- [x] (d) Loans (tabs, force-return, export)
+- [x] (d) Kiosks (register with code + QR, status, revoke); permission screens
+- [/] **Acceptance:** e2e login → add item → adjust +5/−3 → undo → skyline updates — verified by hand in a browser (login + TOTP, write-off −3 → Undo, live socket); the automated Playwright suite lands in S13
+- [/] **Acceptance:** route JS ≤ 250 KB ✅ (max 223 KB first load, zod-free `@labpass/contracts/client`); LCP/INP and the finish gate at 1440x900 and 390x844 are measured on the lab server in S13
 
 **[S10 · People, credentials & configuration](./04-steps-surfaces-release.md#s10--admin-console--people-credentials--configuration)**, in PR slices
 
-- [ ] (a) Students: search and profile, card bind/unbind, link approvals, PIN reset
-- [ ] (a) Import wizard (map → diff → commit → history → rollback) + SIS connector page
-- [ ] (b) Credential request queue: per-field diff, in-person verification
-- [ ] (c) Alerts & notifications: thresholds, channels with OTP verification, quiet hours, test send, delivery log
-- [ ] (d) Settings: labels, manual policy, loan rules, kiosk settings, retention, `minSupportedVersion`
-- [ ] (d) Users & roles, audit log, reports
-- [ ] **Acceptance:** e2e covers import + rollback, auto and manual approval, threshold → email, settings → kiosk event
-- [ ] **Acceptance:** `click-path-audit` is clean, the finish gate passes, and the `pii-detector` review is clean
+- [x] (a) Students: search and profile, card bind/unbind, link approvals, PIN reset
+- [x] (a) Import wizard (map → diff → commit → history → rollback) + SIS connector page
+- [x] (b) Credential request queue: per-field diff, in-person verification
+- [x] (c) Alerts & notifications: thresholds, channels with OTP verification, quiet hours, test send, delivery log
+- [x] (d) Settings: labels, manual policy, loan rules, kiosk settings, retention, `minSupportedVersion`
+- [x] (d) Users & roles, audit log, reports
+- [/] **Acceptance:** (API-level tests cover each flow; browser e2e moves to S13) e2e covers import + rollback, auto and manual approval, threshold → email, settings → kiosk event
+- [/] **Acceptance:** (scheduled with the S13 audit pass) `click-path-audit` is clean, the finish gate passes, and the `pii-detector` review is clean
 
 ### M8 · Kiosk app (S11, S06.5, S11.5)
 
@@ -305,12 +305,12 @@ Owner: — · Started: — · Completed: — · Details: [S11](./04-steps-surfac
 
 **S06.5 · DESFire EV3 card authentication** (decision Q1)
 
-- [ ] `CardKeyStore` port: master key from a secret, per-card AN10922 keys, versioned keys, never logged
-- [ ] Relay endpoints `/kiosk/card-auth/start` and `/step` (`AuthenticateEV2First`), added to the contract
+- [x] `CardKeyStore` port: master key from a secret, per-card AN10922 keys, versioned keys, never logged
+- [x] Relay endpoints `/kiosk/card-auth/start` and `/step` (`AuthenticateEV2First`), added to the contract
 - [ ] Kiosk `transceive` + `DesfireRelay`; failures follow `cardAuthMode`
-- [ ] NXP test vectors + FakeCard simulator, with all failure cases
-- [ ] Admin: `cardAuthMode` setting, key version and auth-failure count on the student profile
-- [ ] **Acceptance:** all vectors and failure cases pass; keys never leave the server (I4 test)
+- [x] NXP test vectors + FakeCard simulator, with all failure cases
+- [x] Admin: `cardAuthMode` setting, key version and auth-failure count on the student profile
+- [x] **Acceptance:** all vectors and failure cases pass; keys never leave the server (I4 test)
 - [ ] **Acceptance:** 50 real sample-card taps: ≥ 99 % success, p95 ≤ 800 ms; crypto review is clean
 
 **S11.5 · Kiosk offline mode** (decision Q6)

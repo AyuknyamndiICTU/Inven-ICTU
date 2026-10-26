@@ -2,6 +2,8 @@ export * from './common';
 export * from './routes';
 export * from './events';
 export * from './client';
+export { routeManifest } from './manifest';
+export { validateResponse } from './validate';
 export { buildOpenApi } from './openapi';
 export * from './schemas/settings';
 export * as AuthSchemas from './schemas/auth';

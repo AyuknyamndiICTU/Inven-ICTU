@@ -1,6 +1,6 @@
 'use client';
 
-import type { AdminRole } from '@labpass/contracts';
+import type { AdminRole } from '@labpass/contracts/client';
 import type { MessageKey } from '@labpass/i18n';
 import { CapsuleNav, Dialog, IconButton, StatusCapsule, useToast } from '@labpass/ui';
 import { Command } from 'cmdk';

@@ -1,6 +1,6 @@
 'use client';
 
-import type { AdminRole } from '@labpass/contracts';
+import type { AdminRole } from '@labpass/contracts/client';
 import { EmptyState, ErrorState, IconButton, LockedState, Skeleton } from '@labpass/ui';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';

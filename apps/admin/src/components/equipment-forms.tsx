@@ -1,6 +1,6 @@
 'use client';
 
-import type { Equipment } from '@labpass/contracts';
+import type { Equipment } from '@labpass/contracts/client';
 import { Button, Drawer, Input, useToast } from '@labpass/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { Minus, Plus } from 'lucide-react';

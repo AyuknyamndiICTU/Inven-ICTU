@@ -1,6 +1,6 @@
 'use client';
 
-import type { Loan } from '@labpass/contracts';
+import type { Loan } from '@labpass/contracts/client';
 import { Button, Dialog, Input, StatusCapsule, Table, TBody, Td, Th, THead, Tr, useToast } from '@labpass/ui';
 import { Download, Search, Undo2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';

@@ -1,6 +1,6 @@
 'use client';
 
-import type { Equipment } from '@labpass/contracts';
+import type { Equipment } from '@labpass/contracts/client';
 import { Button, EquipmentIcon, Input, StockHealthBadge, Table, TBody, Td, Th, THead, Tr } from '@labpass/ui';
 import { Plus, Search, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';

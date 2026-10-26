@@ -7,6 +7,8 @@
   - zod schemas, plus a route registry (`routes.ts`) recording, for each endpoint: method, path, auth kind, minimum role, params/query/body/response schemas, and the idempotent, audited and rate-limit flags.
   - The **API** validates every request (and, in tests, every response) against the registry.
   - The **clients** (admin, kiosk, student app) use `createApiClient()`, whose types are inferred from the registry.
+    Browser bundles import it from `@labpass/contracts/client`, which reads a generated zod-free `manifest.ts` (method, path, idempotent and body/response kinds) so route JS stays within the 250 KB budget.
+    A test fails when the manifest drifts from the registry. Callers can pass `validate: validateResponse` (main entry) to check responses.
   - **`openapi.json` (OpenAPI 3.1)** is generated from the registry. `pnpm contracts:check` fails when it is stale (invariant I3).
   - The **RBAC matrix test** is generated from each route's `minRole` (the plan's `x-roles`).
 - **Consequences:**

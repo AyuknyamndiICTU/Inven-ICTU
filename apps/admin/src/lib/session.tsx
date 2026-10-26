@@ -1,6 +1,6 @@
 'use client';
 
-import { type AdminRole, type AdminUser, roleSatisfies } from '@labpass/contracts';
+import { type AdminRole, type AdminUser, roleSatisfies } from '@labpass/contracts/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, type ReactNode } from 'react';

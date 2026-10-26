@@ -1,6 +1,10 @@
 import type { z } from 'zod';
 import type { Problem } from './common';
-import { routes, type RouteId, type Routes, type RouteSpec } from './routes';
+import { routeManifest } from './manifest';
+import type { RouteId, Routes, RouteSpec } from './routes';
+
+/** The transport-relevant subset of a RouteSpec (no zod), generated into manifest.ts. */
+export type ManifestEntry = Pick<RouteSpec, 'method' | 'path' | 'idempotent' | 'bodyKind' | 'responseKind'>;
 
 type InputOf<R> = (R extends { params: infer P extends z.ZodType } ? { params: z.input<P> } : { params?: undefined }) &
   (R extends { query: infer Q extends z.ZodType } ? { query?: Partial<z.input<Q>> } : { query?: undefined }) &
@@ -42,11 +46,18 @@ export interface ApiClientOptions {
   fetch?: typeof fetch;
   headers?: () => Record<string, string> | Promise<Record<string, string>>;
   credentials?: RequestCredentials;
-  /** Validate JSON responses against the contract (recommended in development and tests). */
-  validateResponses?: boolean;
+  /**
+   * Optional response check, e.g. `validateResponse` from the main entry (recommended in tests).
+   * Kept injectable so browser bundles that import `@labpass/contracts/client` stay free of zod.
+   */
+  validate?: (id: RouteId, data: unknown) => unknown;
 }
 
-export function buildPath(spec: RouteSpec, params?: Record<string, unknown>, query?: Record<string, unknown>): string {
+export function buildPath(
+  spec: Pick<RouteSpec, 'path'>,
+  params?: Record<string, unknown>,
+  query?: Record<string, unknown>,
+): string {
   const path = spec.path.replace(/:([A-Za-z0-9_]+)/g, (_m, name: string) => {
     const v = params?.[name];
     if (v === undefined || v === null) throw new Error(`Missing path parameter "${name}"`);
@@ -66,7 +77,7 @@ export function createApiClient(opts: ApiClientOptions) {
     id: Id,
     input: RouteInput<Id> = {} as RouteInput<Id>,
   ): Promise<RouteOutput<Id>> {
-    const spec = routes[id] as RouteSpec;
+    const spec = routeManifest[id];
     const anyInput = input as {
       params?: Record<string, unknown>;
       query?: Record<string, unknown>;
@@ -117,7 +128,7 @@ export function createApiClient(opts: ApiClientOptions) {
     if (spec.responseKind === 'csv' || spec.responseKind === 'text') return (await res.text()) as RouteOutput<Id>;
     if (spec.responseKind === 'binary') return (await res.blob()) as RouteOutput<Id>;
     const data: unknown = await res.json();
-    if (opts.validateResponses && spec.response) return spec.response.parse(data) as RouteOutput<Id>;
+    if (opts.validate) return opts.validate(id, data) as RouteOutput<Id>;
     return data as RouteOutput<Id>;
   }
 

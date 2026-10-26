@@ -1,6 +1,6 @@
 'use client';
 
-import type { AdminUser } from '@labpass/contracts';
+import type { AdminUser } from '@labpass/contracts/client';
 
 type NotificationPrefs = AdminUser['notificationPrefs'];
 import { Button, Input, StatusCapsule, Table, TBody, Td, Th, THead, Tr, useToast } from '@labpass/ui';

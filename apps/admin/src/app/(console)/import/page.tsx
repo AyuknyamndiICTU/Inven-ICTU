@@ -1,6 +1,6 @@
 'use client';
 
-import type { DirectoryImportDto } from '@labpass/contracts';
+import type { DirectoryImportDto } from '@labpass/contracts/client';
 import {
   Button,
   Dialog,

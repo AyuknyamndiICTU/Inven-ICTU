@@ -1,6 +1,6 @@
 'use client';
 
-import type { Settings } from '@labpass/contracts';
+import type { Settings } from '@labpass/contracts/client';
 import { Button, Input, StatusCapsule, useToast } from '@labpass/ui';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
