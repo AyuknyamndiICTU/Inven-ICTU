@@ -5,7 +5,9 @@ import { resolve } from 'node:path';
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    // Bundle the runtime dependencies so the installer ships no node_modules (electron-builder.yml).
+    // Only Electron, Node built-ins and the optional native PC/SC binding (loaded at runtime) stay external.
+    plugins: [externalizeDepsPlugin({ exclude: ['@labpass/contracts', 'zod', 'socket.io-client'] })],
     build: {
       rollupOptions: {
         input: {
@@ -24,6 +26,9 @@ export default defineConfig({
     root: resolve(__dirname, 'src/renderer'),
     server: { port: 3101, strictPort: true },
     plugins: [react(), tailwindcss()],
-    build: { rollupOptions: { input: { index: resolve(__dirname, 'src/renderer/index.html') } } },
+    build: {
+      minify: 'esbuild',
+      rollupOptions: { input: { index: resolve(__dirname, 'src/renderer/index.html') } },
+    },
   },
 });
