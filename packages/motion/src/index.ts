@@ -42,6 +42,7 @@ export function resolveMotionLevel(setting: MotionLevel, prefersReducedMotion: b
 export function tween(
   duration: keyof typeof motionTokens.duration = 'normal',
   ease: keyof typeof motionTokens.easing = 'smooth',
-) {
-  return { duration: motionTokens.duration[duration], ease: [...motionTokens.easing[ease]] as number[] };
+): { duration: number; ease: [number, number, number, number] } {
+  const [a, b, c, d] = motionTokens.easing[ease];
+  return { duration: motionTokens.duration[duration], ease: [a, b, c, d] };
 }
