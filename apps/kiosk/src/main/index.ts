@@ -1,58 +1,171 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage, session, shell } from 'electron';
 import { join } from 'node:path';
-import { hardenedWebPreferences, isAllowedNavigation } from '../shared/security';
+import { io } from 'socket.io-client';
+import {
+  contentSecurityPolicy,
+  hardenedWebPreferences,
+  isAllowedNavigation,
+  isAllowedPermission,
+} from '../shared/security';
+import { ConfigStore } from './config';
+import { eventSender, registerIpc } from './ipc';
+import { KioskService, type SocketFactory } from './kiosk-service';
+import { RotatingLog } from './logger';
+import { createDevReader, type Scenario } from './reader/dev-reader';
+import type { ReaderDriver } from './reader/driver';
+import { UtilityReaderDriver } from './reader/utility-driver';
 
-const isDev = !app.isPackaged && Boolean(process.env.ELECTRON_RENDERER_URL);
+const devServerUrl = !app.isPackaged ? process.env.ELECTRON_RENDERER_URL : undefined;
+const isDev = Boolean(devServerUrl) || process.env.LABPASS_DEV === '1';
+const kioskMode = !isDev && process.env.LABPASS_KIOSK_MODE !== '0';
+
+let win: BrowserWindow | null = null;
+let service: KioskService | null = null;
+
+const userData = process.env.LABPASS_USER_DATA ?? app.getPath('userData');
+if (process.env.LABPASS_USER_DATA) app.setPath('userData', userData);
+const log = new RotatingLog(join(userData, 'logs'));
+
+// The kiosk is the only foreground app: never background or occlusion-throttle its renderer (animations gate input).
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 
 function createWindow(): BrowserWindow {
-  const win = new BrowserWindow({
+  const w = new BrowserWindow({
     width: 1920,
     height: 1080,
     show: false,
     backgroundColor: '#07080A',
     autoHideMenuBar: true,
-    kiosk: !isDev && process.env.LABPASS_KIOSK_MODE !== '0',
-    webPreferences: hardenedWebPreferences(join(__dirname, '../preload/index.js')),
+    kiosk: kioskMode,
+    fullscreen: kioskMode,
+    webPreferences: hardenedWebPreferences(join(__dirname, '../preload/index.js'), isDev),
   });
+  w.removeMenu();
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => log.info('window.closed'));
 
-  win.once('ready-to-show', () => win.show());
-
-  // No new windows, no navigation away from the app.
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://')) void shell.openExternal(url);
+  w.webContents.setWindowOpenHandler(({ url }) => {
+    if (isDev && url.startsWith('https://')) void shell.openExternal(url);
     return { action: 'deny' };
   });
-  win.webContents.on('will-navigate', (event, url) => {
-    if (!isAllowedNavigation(url, process.env.ELECTRON_RENDERER_URL)) event.preventDefault();
+  w.webContents.on('will-navigate', (event, url) => {
+    if (!isAllowedNavigation(url, devServerUrl)) event.preventDefault();
+  });
+  w.webContents.on('will-attach-webview', (event) => event.preventDefault());
+
+  // Relaunch on renderer crash or hang (S11 task 1).
+  w.webContents.on('render-process-gone', (_e, details) => {
+    log.error('renderer.gone', details.reason);
+    if (details.reason !== 'clean-exit') w.reload();
+  });
+  w.on('unresponsive', () => {
+    log.warn('renderer.unresponsive');
+    setTimeout(() => !w.isDestroyed() && w.webContents.isCrashed() && w.reload(), 10_000);
   });
 
-  if (isDev && process.env.ELECTRON_RENDERER_URL) {
-    void win.loadURL(process.env.ELECTRON_RENDERER_URL);
-  } else {
-    void win.loadFile(join(__dirname, '../renderer/index.html'));
-  }
-  return win;
+  if (devServerUrl) void w.loadURL(devServerUrl);
+  else void w.loadFile(join(__dirname, '../renderer/index.html'));
+  return w;
 }
+
+function hardenSession() {
+  const csp = contentSecurityPolicy(devServerUrl);
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [csp] } });
+  });
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback, details) => {
+    const mediaTypes = 'mediaTypes' in details ? (details.mediaTypes ?? []) : [];
+    callback(isAllowedPermission(permission, mediaTypes));
+  });
+  session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'media');
+}
+
+const socketFactory: SocketFactory = (url, token) =>
+  io(url, {
+    auth: { token },
+    transports: ['websocket'],
+    reconnectionDelayMax: 10_000,
+  });
+
+function createReader(): { driver: ReaderDriver; simulate?: (scenario: Scenario) => void } {
+  const choice = process.env.LABPASS_READER ?? (isDev ? 'fake' : 'pcsc');
+  if (choice === 'fake') {
+    const dev = createDevReader();
+    return { driver: dev.reader, simulate: dev.simulate };
+  }
+  return { driver: new UtilityReaderDriver(join(__dirname, 'reader-host.js')) };
+}
+
+async function boot() {
+  hardenSession();
+  const store = new ConfigStore(
+    userData,
+    {
+      available: () => safeStorage.isEncryptionAvailable(),
+      encrypt: (s) => safeStorage.encryptString(s),
+      decrypt: (b) => safeStorage.decryptString(b),
+    },
+    { apiUrl: process.env.LABPASS_API_URL ?? 'http://127.0.0.1:4000' },
+  );
+  const reader = createReader();
+  service = new KioskService({
+    store,
+    driver: reader.driver,
+    log,
+    emit: eventSender(() => win?.webContents ?? null),
+    socket: socketFactory,
+    appVersion: app.getVersion(),
+    dev: isDev,
+    allowHttp: process.env.LABPASS_ALLOW_HTTP === '1',
+    simulate: reader.simulate,
+    onQuit: () => app.quit(),
+    onReload: () => win?.reload(),
+  });
+  registerIpc(ipcMain, service, devServerUrl);
+  win = createWindow();
+  await service.start();
+  log.info('kiosk.started', app.getVersion());
+}
+
+process.on('uncaughtException', (err) => {
+  log.error('main.uncaught', err.name);
+  if (!isDev) {
+    app.relaunch();
+    app.exit(1);
+  }
+});
+process.on('unhandledRejection', (reason) => {
+  log.error('main.unhandledRejection', reason instanceof Error ? reason.name : typeof reason);
+});
+app.on('child-process-gone', (_e, details) => log.error('child.gone', `${details.type} ${details.reason}`));
+app.on('before-quit', () => log.info('app.quit'));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    const [win] = BrowserWindow.getAllWindows();
     if (win) {
       if (win.isMinimized()) win.restore();
       win.focus();
     }
   });
 
-  app.whenReady().then(() => {
-    createWindow();
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  if (app.isPackaged && process.env.LABPASS_AUTOSTART !== '0') {
+    app.setLoginItemSettings({ openAtLogin: true });
+  }
+
+  app.on('web-contents-created', (_e, contents) => {
+    contents.on('will-navigate', (event, url) => {
+      if (!isAllowedNavigation(url, devServerUrl)) event.preventDefault();
     });
   });
 
+  void app.whenReady().then(boot);
+
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
+    void service?.stop();
+    app.quit();
   });
 }

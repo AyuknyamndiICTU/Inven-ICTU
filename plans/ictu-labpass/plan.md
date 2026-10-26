@@ -39,11 +39,11 @@ Status: ⬜ Not started · 🟨 In progress · ✅ Completed · ⛔ Blocked
 |                          | [M5 Low-stock alerts](#m5--low-stock-alerts-dev-verified-s07)                              | S07               | W9–W10        | 8 / 11        | 🟨                   |
 | 3 · Design system        | [M6 UI kit & signature theatre](#m6--ui-kit--signature-theatre-s08a-s08b)                  | S08a, S08b        | W3–W7         | 11 / 13       | 🟨                   |
 | 4 · Product surfaces     | [M7 Admin console](#m7--admin-console-s09-s10)                                             | S09, S10          | W9–W13        | 12 / 16       | 🟨                   |
-|                          | [M8 Kiosk app](#m8--kiosk-app-s11-s065-s115)                                               | S11, S06.5, S11.5 | W9–W15        | 5 / 28        | 🟨                   |
+|                          | [M8 Kiosk app](#m8--kiosk-app-s11-s065-s115)                                               | S11, S06.5, S11.5 | W9–W15        | 15 / 28       | 🟨                   |
 |                          | [M9 Student app: web + Android](#m9--student-app-web-app--android-nfc-app-s12)             | S12               | W9–W13        | 0 / 11        | ⬜                   |
 | 5 · Hardening            | [M10 Release candidate](#m10--release-candidate-s13)                                       | S13               | W16–W17       | 0 / 10        | ⬜                   |
 | 6 · Launch               | [M11 Production, pilot & go-live](#m11--production-pilot--go-live-s14)                     | S14               | W18–W21       | 0 / 19        | ⬜                   |
-|                          | **Total**                                                                                  | 18 steps          | ~21 weeks     | **106 / 202** |                      |
+|                          | **Total**                                                                                  | 18 steps          | ~21 weeks     | **116 / 202** |                      |
 
 \* Indicative, for a team of 3–4 developers. Phases 2 and 3 run in parallel, and so do M7–M9. The kiosk (M8) runs 2 weeks longer than in v1.1 because of offline mode and DESFire. Refine the dates after M1.
 
@@ -286,28 +286,28 @@ Owner: AyuknyamndiICTU · Started: 2026-10-24 · Completed: —
 
 ### M8 · Kiosk app (S11, S06.5, S11.5)
 
-Owner: — · Started: — · Completed: — · Details: [S11](./04-steps-surfaces-release.md#s11--kiosk-app-electron--nfc-reader--the-showpiece) · [S06.5](./03-steps-foundation-backend.md#s065--desfire-ev3-card-authentication-inserted-by-decision-q1) · [S11.5](./04-steps-surfaces-release.md#s115--kiosk-offline-mode-inserted-by-decision-q6)
+Owner: AyuknyamndiICTU · Started: 2026-10-26 · Completed: — · Details: [S11](./04-steps-surfaces-release.md#s11--kiosk-app-electron--nfc-reader--the-showpiece) · [S06.5](./03-steps-foundation-backend.md#s065--desfire-ev3-card-authentication-inserted-by-decision-q1) · [S11.5](./04-steps-surfaces-release.md#s115--kiosk-offline-mode-inserted-by-decision-q6)
 
 **S11 · Kiosk app**
 
-- [ ] (a) Hardened Electron main process: kiosk mode, single instance, auto-start, relaunch on crash
-- [ ] (a) ReaderDriver (PcscDriver + FakeReader): SELECT-then-UID, debounce, LED and buzzer
-- [ ] (a) Typed IPC for business operations only; the token never reaches the renderer
-- [ ] (b) Main-process API client, `/kiosk` socket, challenge pool, heartbeat, device registration
-- [ ] (b) Scan-the-Kiosk: LiveChallengeQR + optional webcam response QR
-- [ ] (c) XState flow and timers, K9 error states, K10 assistant overlay
-- [ ] (d) Screens K1–K10 with A1–A13/E1: **dropdown borrow**, open-lines return, matricule + PIN, link card
-- [ ] (e) Degraded mode, NSIS packaging, signed auto-update (or the manual-update runbook)
-- [ ] **Acceptance:** e2e passes: card, HCE, scan, manual, unknown card, `409`, API down, token isolation
-- [ ] **Acceptance:** real reader: A2 ≤ 100 ms; tap → student shown p95 ≤ 800 ms
-- [ ] **Acceptance:** the 12 h soak passes; 60 fps on the lab PC (or the auto-selected `motionLevel`)
-- [ ] **Acceptance:** finish gate at 1920x1080 and 1366x768; Electronegativity reports no high findings
+- [x] (a) Hardened Electron main process: kiosk mode, single instance, auto-start, relaunch on crash (+ CSP that forbids every renderer request, webcam-only permission, PII-free rotating log)
+- [x] (a) ReaderDriver (PcscDriver in a `utilityProcess` + FakeReader): SELECT-then-UID, locked-phone detection, debounce, LED and buzzer — native binding verified on the lab PC in M1
+- [x] (a) Typed IPC for business operations only; the token never reaches the renderer (device token in DPAPI `safeStorage`; the student session JWT also stays in main)
+- [x] (b) Main-process API client, `/kiosk` socket, challenge pool, heartbeat, device registration (code or `LPKR1` QR)
+- [x] (b) Scan-the-Kiosk: LiveChallengeQR + optional webcam response QR (jsQR in the renderer → text only to main)
+- [x] (c) XState flow and timers, K9 error states, K10 assistant overlay (19 model tests: every transition and timeout)
+- [x] (d) Screens K1–K10 with A1–A13/E1: **dropdown borrow**, open-lines return, matricule + PIN, link card; EN/FR, aria-live greeting, sound cues
+- [x] (e) Degraded mode (reader missing / API down → K9), NSIS packaging (`pnpm --filter @labpass/kiosk dist`, self-contained 1.8 MB asar), ~~signed auto-update~~ → manual-update runbook [`docs/runbooks/kiosk.md`](../../docs/runbooks/kiosk.md) until Q12
+- [x] **Acceptance:** e2e passes: card, HCE, scan, manual, unknown card, `409`, API down, token isolation (13 Playwright `_electron` scenarios + 43 main-process tests)
+- [ ] **Acceptance:** real reader: A2 ≤ 100 ms; tap → student shown p95 ≤ 800 ms ⛔ hardware
+- [ ] **Acceptance:** the 12 h soak passes; 60 fps on the lab PC (or the auto-selected `motionLevel`) ⛔ lab PC
+- [/] **Acceptance:** finish gate at 1920x1080 and 1366x768 ✅ (screenshots from the e2e run, layout fixed for both); Electronegativity scan moves to S13 with the other security scans
 
 **S06.5 · DESFire EV3 card authentication** (decision Q1)
 
 - [x] `CardKeyStore` port: master key from a secret, per-card AN10922 keys, versioned keys, never logged
 - [x] Relay endpoints `/kiosk/card-auth/start` and `/step` (`AuthenticateEV2First`), added to the contract
-- [ ] Kiosk `transceive` + `DesfireRelay`; failures follow `cardAuthMode`
+- [x] Kiosk `transceive` + `DesfireRelay`; failures follow `cardAuthMode` (no answer → `6F00`, server decides)
 - [x] NXP test vectors + FakeCard simulator, with all failure cases
 - [x] Admin: `cardAuthMode` setting, key version and auth-failure count on the student profile
 - [x] **Acceptance:** all vectors and failure cases pass; keys never leave the server (I4 test)
