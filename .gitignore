@@ -45,3 +45,7 @@ spikes/**/.pepper
 !.vscode/settings.json
 **/.test-storage/
 **/storage/
+
+# Playwright e2e output (traces, finish-gate screenshots)
+.results/
+
