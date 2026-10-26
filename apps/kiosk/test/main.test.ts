@@ -287,6 +287,10 @@ describe('KioskService (main-process orchestration)', () => {
     await k.settle();
     expect(k.last('identify.error')?.error.code).toBe('NETWORK');
     expect(k.service.status().online).toBe(false);
+    // Any successful answer restores "online" without waiting for the 30 s heartbeat.
+    k.backend.down = false;
+    await k.service.run('ticker', undefined);
+    expect(k.service.status().online).toBe(true);
     await k.service.stop();
   });
 

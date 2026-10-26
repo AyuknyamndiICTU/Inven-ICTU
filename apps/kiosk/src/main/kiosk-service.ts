@@ -67,6 +67,7 @@ export class KioskService {
   private tap: TapService;
   private socket: SocketLike | null = null;
   private timers: Array<ReturnType<typeof setInterval>> = [];
+  private recheck: ReturnType<typeof setTimeout> | null = null;
   private reader: { status: ReaderStatus; name: string | null };
   private online = false;
   private config: KioskConfig | null = null;
@@ -100,7 +101,18 @@ export class KioskService {
   }
 
   private makeApi() {
-    return new KioskApi(this.d.store.apiUrl, () => this.d.store.deviceToken(), 8000, this.d.fetch);
+    return new KioskApi(this.d.store.apiUrl, () => this.d.store.deviceToken(), 8000, this.d.fetch, {
+      reachable: (ok) => {
+        this.setOnline(ok);
+        // Recheck soon instead of waiting for the next 30 s heartbeat.
+        if (!ok && !this.recheck && this.d.store.registered) {
+          this.recheck = setTimeout(() => {
+            this.recheck = null;
+            void this.heartbeat();
+          }, 5000);
+        }
+      },
+    });
   }
 
   private makePool() {
@@ -120,6 +132,8 @@ export class KioskService {
   async stop() {
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
+    if (this.recheck) clearTimeout(this.recheck);
+    this.recheck = null;
     this.socket?.disconnect();
     this.socket = null;
     this.tap.dispose();
@@ -392,6 +406,8 @@ export class KioskService {
     },
 
     ticker: async () => this.api.call('kiosk.ticker'),
+
+    challenge: async () => this.pool.displayed(),
 
     signIn: async ({ idempotencyKey, lines }) => {
       const session = this.requireSession();

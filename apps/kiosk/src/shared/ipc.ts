@@ -49,6 +49,7 @@ export const commandSchemas = {
   cardLinkConfirm: z.object({ requestId: Uuid, code: Otp }),
   submitScanResponse: z.object({ text: z.string().min(10).max(4000) }),
   equipment: z.undefined(),
+  challenge: z.undefined(),
   ticker: z.undefined(),
   signIn: z.object({
     /** One key per cart confirmation, reused on retry, so a lost response never borrows twice (ARCH §5 F5). */
@@ -144,6 +145,8 @@ export interface CommandOutputs {
   cardLinkConfirm: { status: 'LINKED' };
   submitScanResponse: IdentifyView;
   equipment: KioskEquipment[];
+  /** The challenge QR currently on display (late subscribers would otherwise wait for the next rotation). */
+  challenge: { qr: string; issuedAt: number; expiresAt: number } | null;
   ticker: TickerEntry[];
   signIn: Receipt;
   signOut: Receipt;

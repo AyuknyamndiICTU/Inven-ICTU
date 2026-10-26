@@ -1,14 +1,53 @@
-import { createTranslator } from '@labpass/i18n';
+import type { Locale } from '@labpass/i18n';
+import { useEffect, useState } from 'react';
+import type { KioskStatus } from '../../shared/ipc';
+import { call, subscribe } from './bridge';
+import { LocaleProvider } from './i18n';
+import { Kiosk } from './kiosk';
+import { SetupScreen } from './setup';
 
-const t = createTranslator('en');
+/** Shown when the renderer runs without the Electron bridge (plain browser preview). */
+const PREVIEW: KioskStatus = {
+  registered: false,
+  kioskId: null,
+  appVersion: '0.0.0',
+  reader: { status: 'DISCONNECTED', name: null, kind: 'fake' },
+  online: false,
+  config: null,
+  dev: true,
+};
 
 export function App() {
-  const info = window.labpass?.appInfo();
+  const [status, setStatus] = useState<KioskStatus | null>(null);
+  const [locale, setLocale] = useState<Locale>('en');
+
+  useEffect(() => {
+    let alive = true;
+    call('status')
+      .then((s) => alive && setStatus(s))
+      .catch(() => alive && setStatus(PREVIEW));
+    const off = subscribe((e) => {
+      if (e.type === 'status') setStatus(e.status);
+    });
+    return () => {
+      alive = false;
+      off();
+    };
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-bg text-text">
-      <p className="font-mono text-sm text-text-muted">{info ? `${info.name} ${info.version}` : 'LabPass Kiosk'}</p>
-      <h1 className="font-display text-kiosk tracking-display">{t('kiosk.tapPrompt')}</h1>
-      <p className="text-text-muted">Foundation scaffold (S02). Reader flow arrives in S11.</p>
-    </main>
+    <LocaleProvider locale={locale} setLocale={setLocale}>
+      {!status ? (
+        <main className="k-boot" aria-busy />
+      ) : status.registered ? (
+        <Kiosk status={status} />
+      ) : (
+        <SetupScreen onRegistered={setStatus} />
+      )}
+    </LocaleProvider>
   );
 }

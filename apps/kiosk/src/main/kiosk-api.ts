@@ -46,6 +46,8 @@ export class KioskApi {
     private readonly token: () => string | null,
     private readonly timeoutMs = 8000,
     fetchImpl: typeof fetch = globalThis.fetch.bind(globalThis),
+    /** Connectivity observer: any answer from the server means online; a transport failure means offline. */
+    private readonly observer?: { reachable(ok: boolean): void },
   ) {
     this.client = createApiClient({
       baseUrl,
@@ -61,9 +63,13 @@ export class KioskApi {
   async call<Id extends RouteId>(id: Id, input?: RouteInput<Id>): Promise<RouteOutput<Id>> {
     const signal = AbortSignal.timeout(this.timeoutMs);
     try {
-      return await this.client.call(id, { ...(input ?? {}), signal } as RouteInput<Id>);
+      const out = await this.client.call(id, { ...(input ?? {}), signal } as RouteInput<Id>);
+      this.observer?.reachable(true);
+      return out;
     } catch (e) {
-      throw new KioskApiError(toKioskError(e));
+      const info = toKioskError(e);
+      this.observer?.reachable(!isNetworkError(info));
+      throw new KioskApiError(info);
     }
   }
 }

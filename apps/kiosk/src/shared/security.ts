@@ -15,6 +15,8 @@ export function hardenedWebPreferences(preloadPath: string, devTools = false): W
     webviewTag: false,
     navigateOnDragDrop: false,
     spellcheck: false,
+    // A kiosk must react to a tap even when briefly occluded (e.g. by a Windows dialog): never throttle timers/rAF.
+    backgroundThrottling: false,
     devTools,
   };
 }

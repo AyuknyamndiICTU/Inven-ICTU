@@ -8,9 +8,11 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { createRequire } from 'node:module';
 import type { AddressInfo } from 'node:net';
+import { join } from 'node:path';
 import { Server as IoServer } from 'socket.io';
 
-const vectors = createRequire(__filename)('@labpass/contracts/vectors.json') as {
+// Resolved from the working directory so this file runs under vitest, Playwright and plain Node alike.
+const vectors = createRequire(join(process.cwd(), 'noop.js'))('@labpass/contracts/vectors.json') as {
   ids: { kioskId: string; credentialId: string };
   keys: { device1: { spki: string } };
 };
@@ -220,7 +222,11 @@ export class MockBackend {
   }
 
   /** Simulates F3: a phone scanned the displayed challenge, so the API pushes `identified` to the kiosk socket. */
-  scanBy(matricule = 'ICTU20220456') {
+  async scanBy(matricule = 'ICTU20220456') {
+    // Socket.IO drops broadcasts while a client is reconnecting; wait for the kiosk like the real API's room would.
+    for (let i = 0; i < 100 && (this.io?.of('/kiosk').sockets.size ?? 0) === 0; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
     const s = this.students.find((x) => x.matricule === matricule)!;
     this.emit('identified', this.identified(s, 'SCAN'));
   }

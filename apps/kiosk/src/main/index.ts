@@ -26,6 +26,11 @@ const userData = process.env.LABPASS_USER_DATA ?? app.getPath('userData');
 if (process.env.LABPASS_USER_DATA) app.setPath('userData', userData);
 const log = new RotatingLog(join(userData, 'logs'));
 
+// The kiosk is the only foreground app: never background or occlusion-throttle its renderer (animations gate input).
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+
 function createWindow(): BrowserWindow {
   const w = new BrowserWindow({
     width: 1920,
@@ -39,6 +44,7 @@ function createWindow(): BrowserWindow {
   });
   w.removeMenu();
   w.once('ready-to-show', () => w.show());
+  w.on('closed', () => log.info('window.closed'));
 
   w.webContents.setWindowOpenHandler(({ url }) => {
     if (isDev && url.startsWith('https://')) void shell.openExternal(url);
@@ -130,6 +136,11 @@ process.on('uncaughtException', (err) => {
     app.exit(1);
   }
 });
+process.on('unhandledRejection', (reason) => {
+  log.error('main.unhandledRejection', reason instanceof Error ? reason.name : typeof reason);
+});
+app.on('child-process-gone', (_e, details) => log.error('child.gone', `${details.type} ${details.reason}`));
+app.on('before-quit', () => log.info('app.quit'));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
