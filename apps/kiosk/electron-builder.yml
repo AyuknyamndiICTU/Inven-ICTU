@@ -1,0 +1,42 @@
+# LabPass kiosk installer (S11 task 9). Build: `pnpm --filter @labpass/kiosk dist`
+appId: cm.ictuniversity.labpass.kiosk
+productName: LabPass Kiosk
+copyright: ICT University
+directories:
+  output: dist
+  buildResources: build
+# The main process, preload and renderer are fully bundled by electron-vite, so the installer ships no node_modules
+# except an optional native PC/SC binding (ADR-0002), which must stay outside the asar.
+files:
+  - out/**
+  - package.json
+asar: true
+asarUnpack:
+  - '**/*.node'
+npmRebuild: false
+# Package the Electron binary already installed by pnpm (offline-friendly, same version as development).
+electronDist: ../../node_modules/electron/dist
+# Must match node_modules/electron (pnpm resolves the ^38 range); bump together with the dependency.
+electronVersion: 38.8.6
+extraMetadata:
+  main: out/main/index.js
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: LabPass-Kiosk-Setup-${version}.${ext}
+  # Authenticode (decision Q12): set WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD in the release environment.
+  # Unsigned builds are allowed for the pilot but then auto-update stays OFF (see docs/runbooks/kiosk.md).
+  verifyUpdateCodeSignature: true
+  requestedExecutionLevel: asInvoker
+nsis:
+  oneClick: false
+  perMachine: true
+  allowElevation: true
+  allowToChangeInstallationDirectory: false
+  createDesktopShortcut: false
+  createStartMenuShortcut: true
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+# No update feed until a signed build exists and ICTU IT hosts an HTTPS, allow-listed, versioned channel (Q12).
+publish: null
