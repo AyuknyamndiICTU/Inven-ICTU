@@ -43,6 +43,7 @@ import {
 } from '@labpass/ui';
 import { Plus, Settings } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { TheatreLab } from './theatre-lab';
 
 const ITEMS = [
   { id: '1', name: 'Cisco 2911 Router', code: 'RT-2911', categoryName: 'Routers', available: 4, health: 'OK' as const },
@@ -322,6 +323,7 @@ export default function KitPage() {
           </div>
         </div>
       </Section>
+      <TheatreLab />
     </main>
   );
 }

@@ -30,7 +30,8 @@
     "build": "tsup && node -e \"require('fs').copyFileSync('src/styles.css','dist/styles.css')\"",
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "size": "node scripts/size.mjs"
   },
   "peerDependencies": {
     "motion": "^12.0.0",
