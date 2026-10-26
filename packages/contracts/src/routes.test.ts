@@ -1,9 +1,15 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { buildOpenApi } from './openapi';
 import { pathParams, routeIds, routes, type RouteSpec } from './routes';
 import { defaultSettings } from './schemas/settings';
 import { maskContact, roleSatisfies } from './common';
+import { routeManifest } from './manifest';
+
+const srcDir = dirname(fileURLToPath(import.meta.url));
 
 const all = Object.entries(routes) as Array<[string, RouteSpec]>;
 
@@ -81,5 +87,38 @@ describe('settings defaults encode the Phase 0 decisions', () => {
   });
   it('rejects invalid partial updates', () => {
     expect(z.object({ x: z.int() }).safeParse({ x: 1.5 }).success).toBe(false);
+  });
+});
+
+describe('browser route manifest', () => {
+  it('mirrors the registry exactly (regenerate with `pnpm generate`)', () => {
+    const projected = Object.fromEntries(
+      all.map(([id, r]) => [
+        id,
+        {
+          method: r.method,
+          path: r.path,
+          ...(r.idempotent ? { idempotent: true } : {}),
+          ...(r.bodyKind ? { bodyKind: r.bodyKind } : {}),
+          ...(r.responseKind ? { responseKind: r.responseKind } : {}),
+        },
+      ]),
+    );
+    expect(routeManifest).toEqual(projected);
+  });
+  it('the browser entry does not depend on zod', () => {
+    const seen = new Set<string>();
+    const visit = (file: string): void => {
+      if (seen.has(file)) return;
+      seen.add(file);
+      const src = readFileSync(join(srcDir, file), 'utf8');
+      for (const m of src.matchAll(/^(import|export)(?!\s+type)[^'"]*from\s+'([^']+)'/gm)) {
+        const spec = m[2]!;
+        expect(spec, `${file} imports ${spec}`).not.toBe('zod');
+        if (spec.startsWith('./')) visit(`${spec.slice(2)}.ts`);
+      }
+    };
+    visit('browser.ts');
+    expect(seen.has('client.ts')).toBe(true);
   });
 });

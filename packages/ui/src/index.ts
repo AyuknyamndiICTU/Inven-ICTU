@@ -28,6 +28,7 @@ export {
 } from './components/data';
 export { KpiCounter, PinPad } from './components/kpi';
 export { EquipmentCombobox, type ComboItem, type EquipmentComboboxProps } from './components/combobox';
+export { QrCode } from './components/qr';
 export {
   BlurPush,
   CapsuleNav,

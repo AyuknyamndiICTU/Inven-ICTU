@@ -1,10 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { AdminUser } from '@prisma/client';
 import { authenticator } from 'otplib';
+
+// RFC 6238: accept the previous/next 30 s step to absorb phone clock drift; codes stay single-use (totp-used key).
+authenticator.options = { window: 1 };
 import { API_ENV, type ApiEnv } from '../config/env';
 import { AdminSessionService } from '../platform/auth/admin-session.service';
 import { SecretBox, verifySecret } from '../platform/crypto/crypto';
-import { Errors } from '../platform/http/problem';
+import { AppError, Errors } from '../platform/http/problem';
 import { PrismaService } from '../platform/prisma/prisma.service';
 import { RedisService } from '../platform/redis/redis.service';
 
@@ -97,7 +100,7 @@ export class AuthService {
     const fresh = await this.redis.client.set(`totp-used:${user.id}:${code}`, '1', 'EX', 120, 'NX');
     if (!fresh || !authenticator.check(code, secret)) {
       await this.recordFailure(user);
-      throw Errors.unauthenticated('The code is incorrect or has already been used.');
+      throw new AppError(401, 'INVALID_CODE', 'Not signed in', 'The code is incorrect or has already been used.');
     }
     const updated = await this.prisma.adminUser.update({
       where: { id: user.id },

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ADMIN_ROLES } from './roles';
 
 export const Uuid = z.uuid();
 export const IsoDateTime = z.iso.datetime({ offset: true });
@@ -17,14 +18,9 @@ export const PersonName = z.string().trim().min(1).max(120);
 export const Pin = z.string().regex(/^\d{4,6}$/, '4 to 6 digits');
 export const OtpCode = z.string().regex(/^\d{6}$/, '6 digits');
 
-export const AdminRole = z.enum(['SUPER_ADMIN', 'LAB_ADMIN', 'LAB_ASSISTANT', 'VIEWER']);
+export const AdminRole = z.enum(ADMIN_ROLES);
 export type AdminRole = z.infer<typeof AdminRole>;
-
-/** Role hierarchy: a route's `minRole` is satisfied by that role or any higher one. */
-export const ROLE_RANK: Record<AdminRole, number> = { VIEWER: 1, LAB_ASSISTANT: 2, LAB_ADMIN: 3, SUPER_ADMIN: 4 };
-export function roleSatisfies(role: AdminRole, minRole: AdminRole): boolean {
-  return ROLE_RANK[role] >= ROLE_RANK[minRole];
-}
+export { ADMIN_ROLES, ROLE_RANK, roleSatisfies } from './roles';
 
 export const StudentStatus = z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']);
 export const IdentifyMethod = z.enum(['CARD', 'HCE', 'SCAN', 'MANUAL']);

@@ -18,6 +18,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./client": {
+      "import": {
+        "types": "./dist/browser.d.ts",
+        "default": "./dist/browser.js"
+      },
+      "require": {
+        "types": "./dist/browser.d.cts",
+        "default": "./dist/browser.cjs"
+      }
+    },
     "./tap": {
       "import": {
         "types": "./dist/tap/index.d.ts",
@@ -51,8 +61,8 @@
     "lint": "eslint src scripts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "generate": "pnpm build && node scripts/openapi.mjs write",
-    "check": "pnpm build && node scripts/openapi.mjs check",
+    "generate": "pnpm build && node scripts/manifest.mjs write && pnpm build && node scripts/openapi.mjs write",
+    "check": "pnpm build && node scripts/manifest.mjs check && node scripts/openapi.mjs check",
     "vectors": "pnpm build && node scripts/gen-vectors.mjs"
   },
   "dependencies": {

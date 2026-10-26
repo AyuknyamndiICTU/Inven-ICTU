@@ -12,6 +12,7 @@ import {
   Input,
   KpiCounter,
   PinPad,
+  QrCode,
   QuantityStepper,
   StatusCapsule,
   StockHealthBadge,
@@ -273,5 +274,18 @@ describe('overlays & feedback', () => {
     });
     vi.useRealTimers();
     await vi.waitFor(() => expect(screen.queryByText('Saved')).toBeNull());
+  });
+});
+
+describe('QrCode', () => {
+  it('renders a labelled SVG whose module grid changes with the value and error-correction level', async () => {
+    const { container, rerender } = render(<QrCode value="otpauth://totp/LabPass:a@b?secret=ABC" label="Scan me" />);
+    const svg = screen.getByRole('img', { name: 'Scan me' });
+    const first = container.querySelector('path')!.getAttribute('d');
+    expect(svg.getAttribute('viewBox')).toMatch(/^0 0 \d+ \d+$/);
+    expect(first).toMatch(/^M\d+ \d+h1v1h-1z/);
+    rerender(<QrCode value="otpauth://totp/LabPass:a@b?secret=XYZ" label="Scan me" ecc="H" />);
+    expect(container.querySelector('path')!.getAttribute('d')).not.toBe(first);
+    expect(await seriousViolations(container)).toEqual([]);
   });
 });
