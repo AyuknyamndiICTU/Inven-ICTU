@@ -9,17 +9,29 @@
     "android": "expo run:android",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "icons": "node scripts/icons.mjs",
+    "test:native": "cd android && gradlew :ictu-credential:testDebugUnitTest"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
+    "@labpass/contracts": "workspace:*",
+    "@labpass/design-tokens": "workspace:*",
     "@labpass/i18n": "workspace:*",
     "@labpass/motion": "workspace:*",
+    "@tanstack/react-query": "^5.104.5",
     "expo": "~54.0.10",
+    "expo-brightness": "~14.0.8",
+    "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.9",
     "expo-linking": "~8.0.8",
+    "expo-local-authentication": "~17.0.9",
     "expo-router": "~6.0.8",
+    "expo-screen-capture": "~8.0.10",
+    "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.8",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.4",
@@ -28,6 +40,7 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "@types/react": "~19.1.0",
     "vitest": "^3.2.4"
   }

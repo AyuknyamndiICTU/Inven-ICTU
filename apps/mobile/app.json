@@ -5,11 +5,16 @@
     "scheme": "labpass",
     "version": "0.1.0",
     "orientation": "portrait",
+    "icon": "./public/icons/icon-512.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "runtimeVersion": { "policy": "appVersion" },
     "android": {
       "package": "cm.ictuniversity.labpass",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": { "foregroundImage": "./public/icons/maskable-512.png", "backgroundColor": "#07080A" },
+      "permissions": ["android.permission.NFC", "android.permission.CAMERA", "android.permission.USE_BIOMETRIC"],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "bundler": "metro",
@@ -17,9 +22,18 @@
       "name": "LabPass",
       "shortName": "LabPass",
       "themeColor": "#07080A",
-      "backgroundColor": "#07080A"
+      "backgroundColor": "#07080A",
+      "favicon": "./public/icons/icon-192.png"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        { "cameraPermission": "LabPass uses the camera to scan the kiosk code.", "recordAudioAndroid": false }
+      ],
+      ["expo-local-authentication", { "faceIDPermission": "LabPass uses Face ID to protect your pass." }]
+    ],
     "experiments": {
       "typedRoutes": false
     }

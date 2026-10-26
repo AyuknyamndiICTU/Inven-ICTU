@@ -329,20 +329,20 @@ Owner: AyuknyamndiICTU · Started: 2026-10-26 · Completed: — · Details: [S11
 
 Owner: — · Started: — · Completed: — · Details: [S12](./04-steps-surfaces-release.md#s12--student-app-expo--installable-web-app--android-nfc-app)
 
-- [ ] ICTU IT provides the LabPass subdomain with a **publicly trusted** TLS certificate, and decides whether it is reachable from the internet (Q13). Needed before device testing; use an HTTPS tunnel for development until then
-- [ ] (a) Expo foundation for **web + Android** targets: router, query client, EN/FR, theme, platform token storage, minimum-version and APK-update check
-- [ ] (b) **Web app (PWA)**: manifest, service worker, install guide (iOS Add to Home Screen), passkeys (WebAuthn), camera QR scan, Web Push, `LPR2` offline QR
-- [ ] (c) **Android native module**: Keystore key, headless `HostApduService`, config plugin, NFC detection; JUnit runs the shared vectors
-- [ ] (d) Shared screens: onboarding, enroll, OTP, credential creation, pending/approved
-- [ ] (d) **Pass** screen: Tap (Android app) and **Scan kiosk** (all); loans, history, profile
-- [ ] (e) Hardening (screen capture, root warning, passkey BE/BS flags, pinning ADR)
-- [ ] (e) Distribution: ICTU-held APK signing key, `/download/android` page (checksum + QR), PWA at `/app`, `runtimeVersion` policy
+- [ ] ICTU IT provides the LabPass subdomain with a **publicly trusted** TLS certificate, and decides whether it is reachable from the internet (Q13). Needed before device testing; use an HTTPS tunnel for development until then ⛔ ICTU IT
+- [x] (a) Expo foundation for **web + Android** targets: router, query client, EN/FR, theme (system light/dark from tokens), platform token storage (SecureStore / HttpOnly cookie), minimum-version and APK-update check
+- [x] (b) **Web app (PWA)**: manifest + generated icons, service worker (shell + last Pass/loans), install guide (iOS Add to Home Screen), passkeys (WebAuthn), camera QR scan (BarcodeDetector + lazy jsQR), Web Push (VAPID opt-in), `LPR2` offline QR
+- [/] (c) **Android native module** `ictu-credential`: Keystore key (StrongBox → TEE, unlocked-only), headless `HostApduService`, manifest merge (~~config plugin~~ not needed), NFC detection + preferred service; JUnit vector test written — ⏳ run with Gradle on the build PC (runbook)
+- [x] (d) Shared screens: onboarding, enroll, OTP, credential creation, pending/approved/rejected
+- [x] (d) **Pass** screen: Tap (Android app) and **Scan kiosk** (all) with offline response QR; loans; profile (language, PIN, revoke, sign out)
+- [/] (e) Hardening: screen capture blocked + brightness boost on the response QR ✅, 60 s QR expiry ✅, pinning + key-custody [ADR-0010](../../docs/adr/0010-student-app-hardening.md) ✅, passkey BE/BS recorded server-side ✅; soft root warning → S13
+- [x] (e) Distribution: ICTU-held APK signing key ([runbook](../../docs/runbooks/android-release.md)), `/download/android` page (checksum + QR), PWA served same-origin at the site root (~~`/app`~~, so passkeys and cookies share the API origin), `runtimeVersion` policy
 
 **Acceptance**
 
-- [ ] Android native vectors pass; Playwright passkey flow (virtual authenticator) passes; Lighthouse confirms the PWA is installable
-- [ ] 50 Android-app taps ≥ 98 % (with the app killed); 20 web-app scans each on iPhone Safari and Android Chrome = 100 %; cold start / first load within budget
-- [ ] Finish gate at 390x844 and 360x800 for both targets; TalkBack and VoiceOver pass; security and PII reviews are clean
+- [/] Android native vectors pass (⏳ Gradle on build PC); Playwright passkey flow (virtual authenticator) → S13; PWA installability: manifest + icons + SW in the build ✅, Lighthouse run in S13. Web bundle 328 KB gzip (budget 300) → trim in S13
+- [ ] 50 Android-app taps ≥ 98 % (with the app killed); 20 web-app scans each on iPhone Safari and Android Chrome = 100 %; cold start / first load within budget ⛔ hardware + domain
+- [ ] Finish gate at 390x844 and 360x800 for both targets; TalkBack and VoiceOver pass; security and PII reviews are clean → S13
 
 ---
 
