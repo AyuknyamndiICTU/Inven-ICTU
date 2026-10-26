@@ -14,6 +14,7 @@ import { HealthModule } from './health/health.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { KiosksModule } from './kiosks/kiosks.module';
 import { LendingModule } from './lending/lending.module';
+import { OfflineModule } from './offline/offline.module';
 import { OpsModule } from './ops/reconcile';
 import { createLogger } from './platform/logging/logger';
 import { PlatformModule } from './platform/platform.module';
@@ -36,6 +37,7 @@ export const FEATURE_MODULES: Array<Type<unknown>> = [
   OpsModule,
   AlertsModule,
   CardsModule,
+  OfflineModule,
 ];
 
 @Module({})

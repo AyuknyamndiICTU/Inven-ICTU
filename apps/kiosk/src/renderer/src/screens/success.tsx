@@ -29,6 +29,7 @@ export function SuccessStage({
     <div className="k-success">
       <SuccessLanding size={260} label={t('kiosk.success')} />
       <h1 className="k-headline">{title}</h1>
+      {receipt.offline && <StatusCapsule tone="offline">{t('kiosk.offlineReceipt')}</StatusCapsule>}
       <ul className="k-receipt" aria-label={t('kiosk.success')}>
         {receipt.lines.map((l) => (
           <li key={`${l.equipmentId}-${l.condition ?? ''}`}>

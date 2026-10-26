@@ -16,7 +16,6 @@
     "dist": "electron-vite build && electron-builder --win --x64",
     "dist:dir": "electron-vite build && electron-builder --win --x64 --dir"
   },
-  "dependencies": {},
   "devDependencies": {
     "@fontsource-variable/inter": "^5.2.0",
     "@fontsource-variable/jetbrains-mono": "^5.2.0",
@@ -37,6 +36,7 @@
     "electron": "^38.2.0",
     "electron-builder": "^26.18.0",
     "electron-vite": "^4.0.1",
+    "hash-wasm": "^4.12.0",
     "jsdom": "^26.1.0",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.61.0",

@@ -14,6 +14,14 @@ import { IdentifyService } from './identify.service';
 export type Condition = 'OK' | 'DAMAGED' | 'LOST';
 type Actor = { type: 'KIOSK' | 'ADMIN' | 'SYSTEM'; id: string | null; kioskId: string | null };
 type SettleLine = { loanLineId: string; quantity: number; condition: Condition };
+type ReplayOptions = {
+  occurredAt?: Date;
+  offline?: boolean;
+  /** Admin accepted an offline conflict for an inactive student. */
+  allowInactive?: boolean;
+  /** Admin accepted an offline stock conflict: correct the stock before recording the loan. */
+  correction?: { adminId: string; reason: string };
+};
 
 const OVERDUE_JOB = 'loans-overdue';
 const COLUMN: Record<Condition, Prisma.Sql> = {
@@ -93,12 +101,12 @@ export class LendingService implements OnApplicationBootstrap {
     kioskId: string,
     sess: { s: string; m: 'CARD' | 'HCE' | 'SCAN' | 'MANUAL'; v: 'PIN' | 'OTP' | 'ASSISTANT' | 'OPEN' | null },
     lines: Array<{ equipmentId: string; quantity: number }>,
-    opts: { occurredAt?: Date; offline?: boolean },
+    opts: ReplayOptions,
   ) {
     // Serialises policy checks per student (item limit) without blocking other students.
     await tx.$queryRaw`SELECT id FROM students WHERE id = ${sess.s}::uuid FOR UPDATE`;
     const student = await tx.student.findUniqueOrThrow({ where: { id: sess.s } });
-    if (student.status !== 'ACTIVE') {
+    if (student.status !== 'ACTIVE' && !opts.allowInactive) {
       throw Errors.forbidden(
         student.status === 'SUSPENDED' ? 'STUDENT_SUSPENDED' : 'STUDENT_INACTIVE',
         'Your student account cannot borrow equipment. See a lab assistant.',
@@ -106,9 +114,10 @@ export class LendingService implements OnApplicationBootstrap {
     }
     const open = await this.identify.openLines(student.id, tx);
     const settings = await this.settings.get();
-    if (settings.blockWhenOverdue && open.some((l) => l.overdue))
+    // Offline replays: the equipment already left the lab, and the kiosk applied the policy with its cached data.
+    if (!opts.offline && settings.blockWhenOverdue && open.some((l) => l.overdue))
       throw Errors.forbidden('OVERDUE_BLOCKED', 'Please return your overdue equipment first.');
-    if (settings.maxItemsPerStudent !== null) {
+    if (!opts.offline && settings.maxItemsPerStudent !== null) {
       const outstanding = open.reduce((n, l) => n + l.outstanding, 0);
       const requested = lines.reduce((n, l) => n + l.quantity, 0);
       if (outstanding + requested > settings.maxItemsPerStudent) {
@@ -117,6 +126,31 @@ export class LendingService implements OnApplicationBootstrap {
       }
     }
     for (const l of lines) {
+      if (opts.correction) {
+        // Admin accepted an offline conflict: units that physically left are recorded by first correcting the stock.
+        const e = await tx.equipment.findUniqueOrThrow({
+          where: { id: l.equipmentId },
+          select: { availableQuantity: true },
+        });
+        const shortfall = l.quantity - e.availableQuantity;
+        if (shortfall > 0) {
+          await tx.equipment.update({
+            where: { id: l.equipmentId },
+            data: { totalQuantity: { increment: shortfall }, availableQuantity: { increment: shortfall } },
+          });
+          await tx.stockMovement.create({
+            data: {
+              equipmentId: l.equipmentId,
+              type: 'CORRECTION',
+              delta: shortfall,
+              totalDelta: shortfall,
+              actorType: 'ADMIN',
+              actorId: opts.correction.adminId,
+              reason: opts.correction.reason,
+            },
+          });
+        }
+      }
       const n = await tx.$executeRaw`
         UPDATE equipment SET "availableQuantity" = "availableQuantity" - ${l.quantity}, "updatedAt" = now()
         WHERE id = ${l.equipmentId}::uuid AND active AND "availableQuantity" >= ${l.quantity}`;
@@ -216,6 +250,53 @@ export class LendingService implements OnApplicationBootstrap {
       },
     });
     return receipt;
+  }
+
+  // ───────────── Offline replay (S11.5, ARCH §5 F9) ─────────────
+
+  /**
+   * Replays an offline borrow with the kiosk's txId as the idempotency key (scope per kiosk), so a sync can be
+   * repeated any number of times. Evidence was already re-verified by the caller.
+   */
+  async replayBorrow(
+    kioskId: string,
+    tx: { txId: string; studentId: string; method: 'CARD' | 'HCE' | 'SCAN' | 'MANUAL'; occurredAt: Date },
+    rawLines: Array<{ equipmentId: string; quantity: number }>,
+    opts: Pick<ReplayOptions, 'allowInactive' | 'correction'> = {},
+  ) {
+    const lines = [...rawLines].sort((a, b) => (a.equipmentId < b.equipmentId ? -1 : 1));
+    const sess = { s: tx.studentId, m: tx.method, v: tx.method === 'MANUAL' ? ('ASSISTANT' as const) : null };
+    return this.idempotency.execute({
+      scope: `kiosk.offline:${kioskId}`,
+      key: tx.txId,
+      request: { studentId: tx.studentId, kind: 'BORROW', lines },
+      work: (t) => this.borrow(t, kioskId, sess, lines, { ...opts, offline: true, occurredAt: tx.occurredAt }),
+    });
+  }
+
+  async replayReturn(
+    kioskId: string,
+    tx: { txId: string; studentId: string; occurredAt: Date },
+    rawLines: Array<{ loanLineId: string; quantity: number; condition: 'OK' | 'DAMAGED' }>,
+  ) {
+    const lines = [...rawLines].sort((a, b) =>
+      a.loanLineId < b.loanLineId ? -1 : a.loanLineId > b.loanLineId ? 1 : a.condition < b.condition ? -1 : 1,
+    );
+    return this.idempotency.execute({
+      scope: `kiosk.offline:${kioskId}`,
+      key: tx.txId,
+      request: { studentId: tx.studentId, kind: 'RETURN', lines },
+      work: async (t) => {
+        const r = await this.settle(
+          t,
+          { studentId: tx.studentId },
+          lines,
+          { type: 'KIOSK', id: kioskId, kioskId },
+          `offline return at ${tx.occurredAt.toISOString()}`,
+        );
+        return { loanIds: r.loanIds };
+      },
+    });
   }
 
   /** Admin force-return: same transaction pattern, scoped to one loan, reason required (audited by the route). */

@@ -110,6 +110,10 @@
     "scanCameraHint": "Présentez le code de l’application LabPass à la caméra",
     "cameraUnavailable": "Caméra indisponible",
     "close": "Fermer",
+    "offlineLending": "Hors ligne — les prêts sont enregistrés sur ce kiosque et seront synchronisés.",
+    "offlineReadOnly": "Hors ligne depuis trop longtemps — seuls les retours sont possibles. Demandez à un assistant.",
+    "offlineReceipt": "Hors ligne — sera synchronisé",
+    "pendingSync": "{count} à synchroniser",
     "readingCard": "Lecture de votre carte…",
     "errors": {
       "NETWORK": "Le serveur LabPass ne répond pas.",
@@ -125,6 +129,10 @@
       "CARD_AUTH_FAILED": "Cette carte n’a pas pu être vérifiée. Veuillez voir un assistant.",
       "CARD_AUTH_REQUIRED": "Présentez à nouveau votre carte sur le lecteur.",
       "OVERDUE_BLOCKED": "Veuillez d’abord rendre le matériel en retard.",
+      "OFFLINE_UNKNOWN_CARD": "Cette carte ne peut pas être vérifiée hors ligne. Demandez à un assistant de vous confirmer par matricule.",
+      "OFFLINE_PASSKEY": "Les codes de l’application web ne peuvent pas être vérifiés hors ligne. Demandez à un assistant de vous confirmer par matricule.",
+      "OFFLINE_ASSISTANT_ONLY": "Hors ligne, un assistant de laboratoire doit vous confirmer.",
+      "OFFLINE_READ_ONLY": "L’emprunt est suspendu jusqu’au retour du serveur. Les retours restent possibles.",
       "generic": "Une erreur s’est produite. Veuillez réessayer."
     },
     "actions": {
@@ -154,7 +162,9 @@
       "reader": "Lecteur",
       "server": "Serveur",
       "online": "En ligne",
-      "offline": "Hors ligne"
+      "offline": "Hors ligne",
+      "pending": "En attente de synchronisation",
+      "extendOffline": "Autoriser les prêts hors ligne 2 heures de plus"
     },
     "setup": {
       "title": "Enregistrer ce kiosque",
@@ -486,7 +496,35 @@
       "kiosks": "Bornes",
       "users": "Utilisateurs",
       "audit": "Journal d’audit",
-      "reports": "Rapports"
+      "reports": "Rapports",
+      "offline": "Synchro hors ligne"
+    },
+    "offline": {
+      "title": "Conflits de synchronisation hors ligne",
+      "subtitle": "Prêts enregistrés par une borne pendant une coupure du serveur qui n’ont pas pu être appliqués automatiquement.",
+      "open": "À examiner",
+      "resolved": "Résolus",
+      "empty": "Aucun conflit — tous les prêts hors ligne ont été appliqués.",
+      "kiosk": "Borne",
+      "occurred": "Survenu",
+      "kind": "Action",
+      "lines": "Articles",
+      "evidence": "Identifié par",
+      "accept": "Accepter",
+      "void": "Annuler",
+      "acceptHelp": "Enregistrer ce qui s’est réellement passé. Pour un conflit de stock, le stock est d’abord corrigé, la disponibilité ne devient jamais négative.",
+      "voidHelp": "N’enregistrer rien. À utiliser si la transaction n’a pas eu lieu ou n’est pas fiable.",
+      "note": "Motif (conservé dans le journal d’audit)",
+      "accepted": "Conflit accepté",
+      "voided": "Conflit annulé",
+      "reasons": {
+        "INSUFFICIENT_STOCK": "Stock insuffisant à la synchronisation",
+        "CREDENTIAL_REVOKED": "Carte ou téléphone révoqué",
+        "STUDENT_INACTIVE": "Étudiant inactif",
+        "BUNDLE_EXPIRED": "Données de la borne trop anciennes",
+        "INVALID_EVIDENCE": "Identité non revérifiable",
+        "UNKNOWN_LINE": "Ligne de prêt déjà soldée"
+      }
     },
     "ui": {
       "save": "Enregistrer",

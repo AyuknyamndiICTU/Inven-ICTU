@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, safeStorage, session, shell } from 'electron';
+import { argon2Verify } from 'hash-wasm';
 import { join } from 'node:path';
 import { io } from 'socket.io-client';
 import {
@@ -11,6 +12,8 @@ import { ConfigStore } from './config';
 import { eventSender, registerIpc } from './ipc';
 import { KioskService, type SocketFactory } from './kiosk-service';
 import { RotatingLog } from './logger';
+import { OfflineEngine, type OfflineState } from './offline/engine';
+import { EncryptedStore } from './offline/store';
 import { createDevReader, type Scenario } from './reader/dev-reader';
 import type { ReaderDriver } from './reader/driver';
 import { UtilityReaderDriver } from './reader/utility-driver';
@@ -100,19 +103,27 @@ function createReader(): { driver: ReaderDriver; simulate?: (scenario: Scenario)
 
 async function boot() {
   hardenSession();
-  const store = new ConfigStore(
-    userData,
-    {
-      available: () => safeStorage.isEncryptionAvailable(),
-      encrypt: (s) => safeStorage.encryptString(s),
-      decrypt: (b) => safeStorage.decryptString(b),
-    },
-    { apiUrl: process.env.LABPASS_API_URL ?? 'http://127.0.0.1:4000' },
-  );
+  const secretBox = {
+    available: () => safeStorage.isEncryptionAvailable(),
+    encrypt: (s: string) => safeStorage.encryptString(s),
+    decrypt: (b: Buffer) => safeStorage.decryptString(b),
+  };
+  const store = new ConfigStore(userData, secretBox, {
+    apiUrl: process.env.LABPASS_API_URL ?? 'http://127.0.0.1:4000',
+  });
   const reader = createReader();
+  const offlineStore = new EncryptedStore<OfflineState>(join(userData, 'offline'), 'offline', secretBox);
+  const offline = new OfflineEngine({
+    load: () => offlineStore.read(),
+    save: (s) => offlineStore.write(s),
+    wipe: () => offlineStore.wipe(),
+    kioskId: () => store.kioskId,
+    verifyPin: (pin, hash) => argon2Verify({ password: pin, hash }).catch(() => false),
+  });
   service = new KioskService({
     store,
     driver: reader.driver,
+    offline,
     log,
     emit: eventSender(() => win?.webContents ?? null),
     socket: socketFactory,
