@@ -1,0 +1,25 @@
+apply plugin: 'com.android.library'
+
+group = 'cm.ictuniversity.labpass.credential'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useExpoPublishing()
+
+android {
+  namespace "cm.ictuniversity.labpass.credential"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  testOptions { unitTests.returnDefaultValues = true }
+}
+
+dependencies {
+  testImplementation 'junit:junit:4.13.2'
+  // Android's org.json is a stub in local unit tests; use the real implementation to read vectors.json.
+  testImplementation 'org.json:json:20240303'
+}

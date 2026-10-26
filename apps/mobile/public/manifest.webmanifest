@@ -1,0 +1,19 @@
+{
+  "name": "LabPass — ICTU Cisco Lab",
+  "short_name": "LabPass",
+  "description": "Your ICT University Cisco Lab pass: scan the kiosk to borrow and return equipment.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07080A",
+  "theme_color": "#07080A",
+  "lang": "en",
+  "categories": ["education", "utilities"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

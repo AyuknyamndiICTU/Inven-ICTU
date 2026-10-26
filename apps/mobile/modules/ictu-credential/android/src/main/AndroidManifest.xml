@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Merged into the app manifest: the HCE service, its AID registration and the NFC permission (no config plugin needed). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.NFC" />
+  <!-- Optional so phones without NFC can still install the app and use Scan-the-Kiosk. -->
+  <uses-feature android:name="android.hardware.nfc.hce" android:required="false" />
+
+  <application>
+    <service
+      android:name="cm.ictuniversity.labpass.credential.LabPassHceService"
+      android:exported="true"
+      android:permission="android.permission.BIND_NFC_SERVICE">
+      <intent-filter>
+        <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+      </intent-filter>
+      <meta-data android:name="android.nfc.cardemulation.host_apdu_service" android:resource="@xml/apduservice" />
+    </service>
+  </application>
+</manifest>
