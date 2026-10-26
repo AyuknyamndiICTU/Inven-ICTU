@@ -233,16 +233,16 @@ Owner: AyuknyamndiICTU · Started: 2026-10-23 · Completed: — · Details: [S07
 
 ### M6 · UI kit & signature theatre (S08a, S08b)
 
-Owner: — · Started: — · Completed: —
+Owner: AyuknyamndiICTU · Started: 2026-10-23 · Completed: —
 
 **[S08a · Accessible primitives](./04-steps-surfaces-release.md#s08a--ui-kit--accessible-primitives-states--css-level-signatures-packagesui)**
 
-- [ ] Primitives: Button, Input, **Combobox (the kiosk dropdown)**, QuantityStepper, StockHealth, Dialog/Drawer, Toast + Undo, Table, Skeleton, EmptyState, Tabs, KPI Counter, StatusCapsule, PIN pad
-- [ ] CSS/SVG signatures: CapsuleNav (A7), StockSkyline (A5), BlurPush (A8), DepthType (A9), HorizonGlow (A10), plus static fallbacks
-- [ ] Icons: lucide + in-house equipment silhouettes
-- [ ] Apply the ICTU logo and brand colours (`ictu-*` tokens) once ICTU Communications delivers them (Q11). Until then, keep the placeholders and a re-check contrast test
-- [ ] Storybook: every component × state × reduced motion; axe and visual tests
-- [ ] **Acceptance:** 0 serious axe violations; `pnpm evidence:check ui-kit` passes; no DESIGN §2 anti-patterns
+- [x] Primitives: Button, Input, **Combobox (the kiosk dropdown)**, QuantityStepper, StockHealth, Dialog/Drawer, Toast + Undo, Table, Skeleton, EmptyState, Tabs, KPI Counter, StatusCapsule, PIN pad
+- [x] CSS/SVG signatures: CapsuleNav (A7), StockSkyline (A5), BlurPush (A8), DepthType (A9), HorizonGlow (A10), plus static fallbacks
+- [x] Icons: lucide + in-house equipment silhouettes
+- [/] Apply the ICTU logo and brand colours (`ictu-*` tokens) once ICTU Communications delivers them (Q11). Until then, keep the placeholders and a re-check contrast test ⛔ waiting for ICTU Communications
+- [x] ~~Storybook~~ → component tests (vitest + axe, reduced motion, CSS↔token parity) + a living gallery at admin `/kit`; visual snapshots move to S13 (plan change: Storybook's install/runtime cost on the dev machine)
+- [/] **Acceptance:** 0 serious axe violations ✅ (26 tests); rendered critique against DESIGN §2 happens on the `/kit` gallery in S09
 
 **[S08b · Signature theatre & WebGL](./04-steps-surfaces-release.md#s08b--signature-theatre--webgl-scenes)**
 

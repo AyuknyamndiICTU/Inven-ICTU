@@ -15,3 +15,8 @@ allowBuilds:
 
 # Flat node_modules: Electron packaging, Expo/Metro and Prisma are most reliable with a hoisted layout.
 nodeLinker: hoisted
+
+# One React for every surface (Expo SDK 54 requires 19.1.0); duplicates break hooks across packages.
+overrides:
+  react: 19.1.0
+  react-dom: 19.1.0
