@@ -13,6 +13,7 @@ const PREVIEW: KioskStatus = {
   appVersion: '0.0.0',
   reader: { status: 'DISCONNECTED', name: null, kind: 'fake' },
   online: false,
+  offline: { mode: false, usable: false, pending: 0, readOnly: false, since: null },
   config: null,
   dev: true,
 };

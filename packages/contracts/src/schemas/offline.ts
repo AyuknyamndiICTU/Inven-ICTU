@@ -55,7 +55,18 @@ export const OfflineTransaction = z.object({
   studentId: Uuid,
   method: IdentifyMethod,
   evidence: z.discriminatedUnion('type', [
-    z.object({ type: z.literal('CARD'), uidLookup: B64Url }),
+    /**
+     * `uid` (hex) lets the server re-check the card binding at sync: the server stores UIDs only as peppered HMACs,
+     * so it cannot pre-compute kiosk lookups (ADR-0009). It travels inside the encrypted journal and over TLS only.
+     */
+    z.object({
+      type: z.literal('CARD'),
+      uidLookup: B64Url,
+      uid: z
+        .string()
+        .regex(/^[0-9A-Fa-f]{8,20}$/)
+        .optional(),
+    }),
     z.object({ type: z.literal('HCE'), credentialId: Uuid, nonce: B64Url, ts: z.int(), signature: B64Url }),
     z.object({ type: z.literal('SCAN'), payload: z.string() }),
     z.object({ type: z.literal('ASSISTANT'), assistantId: Uuid }),

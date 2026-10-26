@@ -209,7 +209,14 @@ export function Kiosk({ status }: { status: KioskStatus }) {
 
   const readerBad = status.reader.status === 'DISCONNECTED' || status.reader.status === 'ERROR';
   let capsule: { tone: CapsuleTone; text: string; busy?: boolean } = { tone: 'ok', text: t('kiosk.ready') };
-  if (!status.online) capsule = { tone: 'offline', text: t('common.offline') };
+  if (status.offline.mode)
+    capsule = {
+      tone: 'offline',
+      text: status.offline.pending
+        ? `${t('common.offline')} · ${t('kiosk.pendingSync', { count: status.offline.pending })}`
+        : t('common.offline'),
+    };
+  else if (!status.online) capsule = { tone: 'offline', text: t('common.offline') };
   else if (snap.matches('reading')) capsule = { tone: 'signal', text: t('kiosk.reading'), busy: true };
   else if (readerBad) capsule = { tone: 'out', text: t('kiosk.readerUnavailable') };
 

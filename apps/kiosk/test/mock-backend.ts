@@ -305,6 +305,10 @@ export class MockBackend {
         return this.idempotent(headers, () => this.signIn(b));
       case 'POST /kiosk/sign-out':
         return this.idempotent(headers, () => this.signOut(b));
+      case 'GET /kiosk/offline-bundle':
+        return { status: 200, body: this.offlineBundle() };
+      case 'POST /kiosk/offline-sync':
+        return { status: 200, body: this.offlineSync(b) };
       default:
         return this.problem(404, 'NOT_FOUND', `${method} ${path} is not mocked`);
     }
@@ -485,6 +489,105 @@ export class MockBackend {
         offline: false,
       },
     };
+  }
+
+  // ───────────── offline (S11.5) ─────────────
+
+  bundleVersion = 0;
+  readonly synced = new Set<string>();
+  /** argon2id hash of MOCK.assistantPin, set by tests that need offline assistant confirmation. */
+  assistantPinHash = '';
+  readonly assistantId = randomUUID();
+
+  offlineBundle() {
+    this.bundleVersion++;
+    const now = Date.now();
+    return {
+      version: this.bundleVersion,
+      issuedAt: iso(now),
+      expiresAt: iso(now + 16 * 3600_000),
+      kioskId: MOCK.kioskId,
+      keyVersion: this.bundleVersion,
+      lookupKey: b64urlEncode(new Uint8Array(randomBytes(32))),
+      equipment: this.equipment.map((e) => ({
+        id: e.id,
+        code: e.code,
+        name: e.name,
+        categoryName: e.categoryName,
+        available: e.available,
+      })),
+      cards: [],
+      students: this.students.map((s) => ({
+        id: s.id,
+        matricule: s.matricule,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        status: s.status,
+        overdue: false,
+        openLines: this.openLines(s.id).map((l) => ({
+          loanLineId: l.loanLineId,
+          equipmentId: l.equipmentId,
+          equipmentName: l.equipmentName,
+          outstanding: l.outstanding,
+        })),
+      })),
+      credentials: [
+        {
+          credentialId: MOCK.credentialId,
+          studentId: this.credentials.get(MOCK.credentialId)!,
+          kind: 'DEVICE_KEY',
+          publicKey: vectors.keys.device1.spki,
+          webauthnCredentialId: null,
+        },
+      ],
+      assistants: this.assistantPinHash
+        ? [{ id: this.assistantId, name: 'Lab assistant', pinHash: this.assistantPinHash }]
+        : [],
+      settings: { blockWhenOverdue: true, maxItemsPerStudent: null, offlineMaxHours: 8 },
+    };
+  }
+
+  /** Applies offline transactions in order with the txId as idempotency key; stock never goes negative. */
+  offlineSync(b: Record<string, unknown>) {
+    const applied: string[] = [];
+    const duplicates: string[] = [];
+    const conflicts: Array<{ txId: string; reason: string }> = [];
+    const txs = (b.transactions as Array<Record<string, unknown>>).sort((x, y) => Number(x.seq) - Number(y.seq));
+    for (const t of txs) {
+      const txId = String(t.txId);
+      if (this.synced.has(txId)) {
+        duplicates.push(txId);
+        continue;
+      }
+      this.synced.add(txId);
+      if (t.kind === 'BORROW') {
+        const lines = t.borrowLines as Array<{ equipmentId: string; quantity: number }>;
+        if (lines.some((l) => this.equipment.find((e) => e.id === l.equipmentId)!.available < l.quantity)) {
+          conflicts.push({ txId, reason: 'INSUFFICIENT_STOCK' });
+          continue;
+        }
+        const loanId = randomUUID();
+        for (const l of lines) {
+          this.equipment.find((e) => e.id === l.equipmentId)!.available -= l.quantity;
+          this.lines.push({
+            loanLineId: randomUUID(),
+            loanId,
+            studentId: String(t.studentId),
+            equipmentId: l.equipmentId,
+            outstanding: l.quantity,
+            dueAt: later(240),
+          });
+        }
+      } else {
+        for (const r of t.returnLines as Array<{ loanLineId: string; quantity: number; condition: string }>) {
+          const line = this.lines.find((l) => l.loanLineId === r.loanLineId)!;
+          line.outstanding -= r.quantity;
+          if (r.condition === 'OK') this.equipment.find((e) => e.id === line.equipmentId)!.available += r.quantity;
+        }
+      }
+      applied.push(txId);
+    }
+    return { batchId: randomUUID(), applied, duplicates, conflicts };
   }
 
   // ───────────── adapters ─────────────

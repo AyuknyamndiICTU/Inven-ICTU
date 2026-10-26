@@ -7194,6 +7194,10 @@
                                 "uidLookup": {
                                   "type": "string",
                                   "pattern": "^[A-Za-z0-9_-]+$"
+                                },
+                                "uid": {
+                                  "type": "string",
+                                  "pattern": "^[0-9A-Fa-f]{8,20}$"
                                 }
                               },
                               "required": [

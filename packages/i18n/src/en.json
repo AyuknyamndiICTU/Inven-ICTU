@@ -110,6 +110,10 @@
     "scanCameraHint": "Hold the code from the LabPass app up to the camera",
     "cameraUnavailable": "Camera unavailable",
     "close": "Close",
+    "offlineLending": "Offline — loans are recorded on this kiosk and will sync.",
+    "offlineReadOnly": "Offline for too long — only returns are possible. Ask a lab assistant.",
+    "offlineReceipt": "Offline — will sync",
+    "pendingSync": "{count} to sync",
     "readingCard": "Reading your card…",
     "errors": {
       "NETWORK": "The LabPass server is not answering.",
@@ -125,6 +129,10 @@
       "CARD_AUTH_FAILED": "This card could not be verified. Please see a lab assistant.",
       "CARD_AUTH_REQUIRED": "Hold your card on the reader again.",
       "OVERDUE_BLOCKED": "Please return your overdue equipment first.",
+      "OFFLINE_UNKNOWN_CARD": "This card cannot be checked while the server is offline. Ask a lab assistant to confirm you by matricule.",
+      "OFFLINE_PASSKEY": "Web-app codes cannot be checked offline. Ask a lab assistant to confirm you by matricule.",
+      "OFFLINE_ASSISTANT_ONLY": "While offline, a lab assistant must confirm you.",
+      "OFFLINE_READ_ONLY": "Borrowing is paused until the server is back. Returns still work.",
       "generic": "Something went wrong. Please try again."
     },
     "actions": {
@@ -154,7 +162,9 @@
       "reader": "Reader",
       "server": "Server",
       "online": "Online",
-      "offline": "Offline"
+      "offline": "Offline",
+      "pending": "Waiting to sync",
+      "extendOffline": "Allow offline loans for 2 more hours"
     },
     "setup": {
       "title": "Register this kiosk",
@@ -486,7 +496,35 @@
       "kiosks": "Kiosks",
       "users": "Users",
       "audit": "Audit log",
-      "reports": "Reports"
+      "reports": "Reports",
+      "offline": "Offline sync"
+    },
+    "offline": {
+      "title": "Offline sync conflicts",
+      "subtitle": "Loans recorded by a kiosk while the server was unreachable that could not be applied automatically.",
+      "open": "To review",
+      "resolved": "Resolved",
+      "empty": "No conflicts — every offline loan was applied.",
+      "kiosk": "Kiosk",
+      "occurred": "Happened",
+      "kind": "Action",
+      "lines": "Items",
+      "evidence": "Identified by",
+      "accept": "Accept",
+      "void": "Void",
+      "acceptHelp": "Record what physically happened. For stock conflicts the stock is corrected first, so availability never goes negative.",
+      "voidHelp": "Record nothing. Use this when the transaction did not really happen or cannot be trusted.",
+      "note": "Reason (kept in the audit log)",
+      "accepted": "Conflict accepted",
+      "voided": "Conflict voided",
+      "reasons": {
+        "INSUFFICIENT_STOCK": "Not enough stock when synced",
+        "CREDENTIAL_REVOKED": "Card or phone revoked",
+        "STUDENT_INACTIVE": "Student not active",
+        "BUNDLE_EXPIRED": "Kiosk data too old",
+        "INVALID_EVIDENCE": "Identity could not be re-verified",
+        "UNKNOWN_LINE": "Loan line already settled"
+      }
     },
     "ui": {
       "save": "Save",

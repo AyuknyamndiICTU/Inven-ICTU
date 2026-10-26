@@ -68,7 +68,7 @@ export const commandSchemas = {
   }),
   endSession: z.undefined(),
   assistantUnlock: z.object({ pin: Pin }),
-  assistantAction: z.object({ action: z.enum(['retryReader', 'unregister', 'quit', 'reload']) }),
+  assistantAction: z.object({ action: z.enum(['retryReader', 'unregister', 'quit', 'reload', 'extendOffline']) }),
   devSimulate: z.object({
     scenario: z.enum(['card', 'unknownCard', 'phone', 'lockedPhone', 'foreignPhone', 'unplug', 'plug']),
   }),
@@ -89,6 +89,8 @@ export interface KioskStatus {
   appVersion: string;
   reader: { status: ReaderStatus; name: string | null; kind: 'pcsc' | 'fake' };
   online: boolean;
+  /** S11.5 offline lending: `mode` = lending from the encrypted bundle; `pending` = journal entries to sync. */
+  offline: { mode: boolean; usable: boolean; pending: number; readOnly: boolean; since: string | null };
   config: KioskConfig | null;
   /** True when the kiosk was built for development (FakeReader shortcuts, devtools). */
   dev: boolean;

@@ -18,6 +18,7 @@ import { ChallengePool } from './challenge-pool';
 import { type ConfigStore, isAcceptableApiUrl } from './config';
 import { inlineImage, isAuthError, isNetworkError, KioskApi, KioskApiError, toKioskError } from './kiosk-api';
 import type { RotatingLog } from './logger';
+import type { OfflineEngine } from './offline/engine';
 import { relayDesfire } from './reader/desfire-relay';
 import type { ReaderDriver } from './reader/driver';
 import { TapService, type TapResult } from './reader/tap-service';
@@ -45,6 +46,12 @@ export interface KioskServiceDeps {
   onReload?: () => void;
   /** FakeReader scenarios (dev builds only). */
   simulate?: (scenario: z.output<(typeof commandSchemas)['devSimulate']>['scenario']) => void;
+  /** S11.5 offline lending engine (absent = offline mode disabled, the kiosk shows K9 when the API is down). */
+  offline?: OfflineEngine;
+  /** Hysteresis before lending offline (ARCH F9: 10 s unreachable). */
+  offlineAfterMs?: number;
+  /** Bundle refresh period while online (ARCH F9: 5 minutes). */
+  bundleRefreshMs?: number;
 }
 
 type Input<C extends CommandName> = z.output<(typeof commandSchemas)[C]>;
@@ -82,7 +89,7 @@ export class KioskService {
     this.api = this.makeApi();
     this.pool = this.makePool();
     this.tap = new TapService(d.driver, {
-      takeChallenge: () => this.pool.take(),
+      takeChallenge: () => (this.offlineMode() ? d.offline!.issueNonce() : this.pool.take()),
       kioskId: () => d.store.kioskId,
       now: () => this.now(),
     });
@@ -98,6 +105,40 @@ export class KioskService {
 
   private now() {
     return Date.now() + this.clockOffsetMs;
+  }
+
+  /** Lending from the encrypted bundle: API unreachable for ≥ 10 s and a usable bundle (F9). */
+  private offlineMode(): boolean {
+    const o = this.d.offline;
+    if (this.online || !o?.usable() || o.offlineSince === null) return false;
+    return Date.now() - o.offlineSince >= (this.d.offlineAfterMs ?? 10_000);
+  }
+
+  /** While online: push the journal first, then refresh the bundle every 5 minutes (only with an empty journal). */
+  private syncing = false;
+  private lastOfflineQr = 0;
+  async syncOffline() {
+    const o = this.d.offline;
+    if (!o || !this.online || this.syncing || !this.d.store.registered) return;
+    this.syncing = true;
+    try {
+      const body = o.syncBody();
+      if (body) {
+        const r = await this.api.call('kiosk.offlineSync', { body });
+        o.acknowledge(r);
+        this.d.log.info('offline.synced', `${r.applied.length}/${r.duplicates.length}/${r.conflicts.length}`);
+      }
+      o.cameOnline();
+      const age = o.bundleAge();
+      if (o.pending() === 0 && (age === null || age >= (this.d.bundleRefreshMs ?? 5 * 60_000))) {
+        o.setBundle(await this.api.call('kiosk.offlineBundle'));
+      }
+    } catch (e) {
+      this.d.log.warn('offline.sync.failed', toKioskError(e).code);
+    } finally {
+      this.syncing = false;
+      this.publishStatus();
+    }
   }
 
   private makeApi() {
@@ -162,9 +203,25 @@ export class KioskService {
     for (const t of this.timers) clearInterval(t);
     this.timers = [
       setInterval(() => void this.heartbeat(), this.d.heartbeatMs ?? 30_000),
-      setInterval(() => void this.pool.tick().catch(() => undefined), this.d.poolTickMs ?? 5000),
+      setInterval(() => void this.tickChallenges(), this.d.poolTickMs ?? 5000),
     ];
     await this.heartbeat();
+    await this.pool.tick().catch(() => undefined);
+  }
+
+  /** Online: keep the server challenge pool fresh. Offline: show a kiosk-generated challenge QR (verified locally). */
+  private async tickChallenges() {
+    if (this.offlineMode()) {
+      if (Date.now() - this.lastOfflineQr > 45_000) {
+        const qr = this.d.offline!.challengeQr();
+        if (qr) {
+          this.lastOfflineQr = Date.now();
+          this.d.emit({ type: 'challenge', ...qr });
+        }
+      }
+      this.publishStatus();
+      return;
+    }
     await this.pool.tick().catch(() => undefined);
   }
 
@@ -175,12 +232,13 @@ export class KioskService {
         body: {
           appVersion: this.d.appVersion,
           readerStatus: this.reader.status,
-          pendingOfflineTx: 0,
+          pendingOfflineTx: this.d.offline?.pending() ?? 0,
         },
       });
       this.clockOffsetMs = Date.parse(res.serverTime) - Date.now();
       this.config = res.config;
       this.setOnline(true);
+      void this.syncOffline();
     } catch (e) {
       const err = toKioskError(e);
       if (isAuthError(err)) return this.revoked();
@@ -192,6 +250,8 @@ export class KioskService {
   private setOnline(online: boolean) {
     if (this.online === online) return;
     this.online = online;
+    if (!online) this.d.offline?.wentOffline();
+    else this.lastOfflineQr = 0;
     this.d.log.info(online ? 'api.online' : 'api.offline');
     this.publishStatus();
   }
@@ -199,6 +259,7 @@ export class KioskService {
   private revoked() {
     this.d.log.warn('kiosk.revoked');
     this.d.store.wipe();
+    this.d.offline?.wipe();
     this.session = null;
     this.pool.clear();
     this.socket?.disconnect();
@@ -217,6 +278,13 @@ export class KioskService {
       appVersion: this.d.appVersion,
       reader: { ...this.reader, kind: this.d.driver.kind },
       online: this.online,
+      offline: {
+        mode: this.offlineMode(),
+        usable: Boolean(this.d.offline?.usable()),
+        pending: this.d.offline?.pending() ?? 0,
+        readOnly: Boolean(this.d.offline?.readOnly()),
+        since: this.d.offline?.offlineSince ? new Date(this.d.offline.offlineSince).toISOString() : null,
+      },
       config: this.config,
       dev: this.d.dev,
     };
@@ -268,6 +336,7 @@ export class KioskService {
       this.d.emit({ type: 'tap.error', code: r.code });
       return;
     }
+    if (this.offlineMode()) return this.onOfflineTap(r);
     try {
       let result: IdentifyResponse;
       if (r.kind === 'HCE') {
@@ -276,6 +345,7 @@ export class KioskService {
         });
       } else {
         result = await this.identifyCard(r);
+        if (result.status === 'IDENTIFIED') this.d.offline?.learnCard(r.uid, result.student.id);
       }
       if (result.status === 'UNKNOWN_CARD' && r.kind === 'CARD') this.unknownUid = { uid: r.uid, at: this.now() };
       this.d.log.info('identify.result', `${r.kind} ${result.status}`);
@@ -285,6 +355,28 @@ export class KioskService {
       const error = toKioskError(e);
       this.d.log.warn('identify.failed', `${r.kind} ${error.code}`);
       if (isNetworkError(error)) this.setOnline(false);
+      void this.d.driver.feedback('error');
+      this.d.emit({ type: 'identify.error', error });
+    }
+  }
+
+  private onOfflineTap(r: Exclude<TapResult, { kind: 'ERROR' }>) {
+    try {
+      const result =
+        r.kind === 'HCE'
+          ? this.d.offline!.identifyHce({
+              credentialId: r.credentialId,
+              nonce: r.nonce,
+              ts: r.ts,
+              signature: r.signature,
+            })
+          : this.d.offline!.identifyCard(r.uid);
+      this.d.log.info('identify.result', `${r.kind} OFFLINE ${result.status}`);
+      void this.d.driver.feedback('ok');
+      this.d.emit({ type: 'identify.result', result, via: r.kind });
+    } catch (e) {
+      const error = toKioskError(e);
+      this.d.log.info('identify.failed', `${r.kind} OFFLINE ${error.code}`);
       void this.d.driver.feedback('error');
       this.d.emit({ type: 'identify.error', error });
     }
@@ -356,16 +448,24 @@ export class KioskService {
 
     identifyManual: async ({ matricule }) => {
       this.requireRegistered();
+      if (this.offlineMode()) return this.d.offline!.identifyManual(matricule);
       const res = await this.api.call('kiosk.identify', { body: { method: 'MANUAL', matricule } });
       return this.accept(res);
     },
 
     verifyManual: async (body) => {
+      if (this.offlineMode()) {
+        if (body.method !== 'ASSISTANT') fail('OFFLINE_ASSISTANT_ONLY', 'Offline, a lab assistant must confirm.', 400);
+        return this.d.offline!.verifyAssistant(body.lookupId, (body as { assistantPin: string }).assistantPin);
+      }
       const res = await this.api.call('kiosk.manualVerify', { body });
       return (await this.accept(res)) as IdentifiedView;
     },
 
-    requestOtp: async ({ lookupId }) => this.api.call('kiosk.manualOtp', { body: { lookupId } }),
+    requestOtp: async ({ lookupId }) => {
+      if (this.offlineMode()) fail('OFFLINE_ASSISTANT_ONLY', 'Offline, a lab assistant must confirm.', 400);
+      return this.api.call('kiosk.manualOtp', { body: { lookupId } });
+    },
 
     cardLink: async ({ matricule }) => {
       const u = this.unknownUid;
@@ -386,11 +486,27 @@ export class KioskService {
       } catch {
         fail('NOT_A_LABPASS_CODE', 'This is not a LabPass response code');
       }
+      if (this.offlineMode()) return this.d.offline!.identifyScan(text);
       const res = await this.api.call('kiosk.identify', { body: { method: 'SCAN', payload: text.trim() } });
       return this.accept(res);
     },
 
     equipment: async () => {
+      const bundle = this.d.offline?.bundle;
+      if (this.offlineMode() && bundle) {
+        return bundle.equipment.map((e) => {
+          const available = this.d.offline!.availability(e.id) ?? e.available;
+          return {
+            id: e.id,
+            code: e.code,
+            name: e.name,
+            categoryName: e.categoryName,
+            imageUrl: null,
+            available,
+            health: available === 0 ? ('OUT' as const) : available <= 2 ? ('LOW' as const) : ('OK' as const),
+          };
+        });
+      }
       const list = await this.api.call('kiosk.equipment');
       return Promise.all(
         list.map(async (it): Promise<KioskEquipment> => ({
@@ -405,11 +521,17 @@ export class KioskService {
       );
     },
 
-    ticker: async () => this.api.call('kiosk.ticker'),
+    ticker: async () => (this.offlineMode() ? [] : this.api.call('kiosk.ticker')),
 
-    challenge: async () => this.pool.displayed(),
+    challenge: async () => (this.offlineMode() ? this.d.offline!.challengeQr() : this.pool.displayed()),
 
     signIn: async ({ idempotencyKey, lines }) => {
+      if (this.offlineMode()) {
+        const receipt = this.d.offline!.signIn(lines);
+        this.d.log.info('lending.signIn', `${lines.length} OFFLINE`);
+        this.publishStatus();
+        return receipt;
+      }
       const session = this.requireSession();
       const receipt = await this.api.call('kiosk.signIn', { body: { session, lines }, idempotencyKey });
       this.d.log.info('lending.signIn', String(lines.length));
@@ -418,6 +540,12 @@ export class KioskService {
     },
 
     signOut: async ({ idempotencyKey, lines }) => {
+      if (this.offlineMode()) {
+        const receipt = this.d.offline!.signOut(lines);
+        this.d.log.info('lending.signOut', `${lines.length} OFFLINE`);
+        this.publishStatus();
+        return receipt;
+      }
       const session = this.requireSession();
       const receipt = await this.api.call('kiosk.signOut', { body: { session, lines }, idempotencyKey });
       this.d.log.info('lending.signOut', String(lines.length));
@@ -427,6 +555,7 @@ export class KioskService {
 
     endSession: async () => {
       this.session = null;
+      this.d.offline?.endSession();
       return null;
     },
 
@@ -449,6 +578,9 @@ export class KioskService {
         this.d.onQuit?.();
       } else if (action === 'reload') {
         this.d.onReload?.();
+      } else if (action === 'extendOffline') {
+        this.d.offline?.extend(2);
+        this.publishStatus();
       }
       return null;
     },

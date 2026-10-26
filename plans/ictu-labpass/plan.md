@@ -315,15 +315,15 @@ Owner: AyuknyamndiICTU · Started: 2026-10-26 · Completed: — · Details: [S11
 
 **S11.5 · Kiosk offline mode** (decision Q6)
 
-- [ ] (a) API offline bundle (signed, versioned, `KioskOfflineKey` rotation, ≤ 5 MB for 10k students)
-- [ ] (a) Kiosk encrypted offline store, refreshed every 5 minutes, wiped on revocation
-- [ ] (b) Offline engine: detection, local identification (CARD by UID / HCE / LPR1 scan / assistant), journal, read-only lock after `offlineMaxHours`, amber UI
-- [ ] (b) API `/kiosk/offline-sync`: ordered replay, evidence re-verified, `OfflineSyncConflict` rows, admin alert
-- [ ] (c) Admin **Offline sync conflicts** page (resolve or void, audited)
-- [/] (c) Contract additions ✅ (`kiosk.offlineBundle`, `kiosk.offlineSync`; Prisma `KioskOfflineKey`, `OfflineSyncConflict`) + `docs/runbooks/kiosk-offline.md`
-- [ ] **Acceptance:** cut the API → 20 offline transactions → sync → 0 drift; replaying the sync is a no-op
-- [ ] **Acceptance:** conflicts go to admin review and never break I2
-- [ ] **Acceptance:** read-only lock works; the cache is encrypted at rest; `pii-detector` review is clean
+- [x] (a) API offline bundle (versioned, `KioskOfflineKey` rotation; equipment, students, credential keys, assistant hashes — no contacts/photos/UIDs). ~~Signed~~ → integrity by TLS + device token; card lookups learned by the kiosk ([ADR-0009](../../docs/adr/0009-kiosk-offline-mode.md))
+- [x] (a) Kiosk encrypted offline store (AES-256-GCM, key wrapped by DPAPI `safeStorage`), refreshed every 5 minutes, wiped on revocation
+- [x] (b) Offline engine: detection (10 s), local identification (learned CARD lookup / HCE / LPR1 with kiosk nonces / assistant PIN via argon2), ordered journal, read-only lock after `offlineMaxHours` (assistant can extend), amber UI + pending counter + offline receipts — LPR2 passkeys → assistant (ADR-0009)
+- [x] (b) API `/kiosk/offline-sync`: ordered replay with txId idempotency, evidence re-verified, `OfflineSyncConflict` rows, admin realtime alert
+- [x] (c) Admin **Offline sync** page (accept with stock correction, or void; audited)
+- [x] (c) Contract additions (`evidence.uid`, OpenAPI regenerated) + [`docs/runbooks/kiosk-offline.md`](../../docs/runbooks/kiosk-offline.md)
+- [x] **Acceptance:** cut the API → 20 offline transactions → sync → 0 drift; replaying the sync is a no-op (kiosk round-trip test + API replay test)
+- [x] **Acceptance:** conflicts go to admin review and never break I2 (API test asserts `available + out = total` after accept/void)
+- [/] **Acceptance:** read-only lock works ✅; the cache is encrypted at rest ✅ (test checks no matricule/UID in the file); formal `pii-detector` review with S13
 
 ### M9 · Student app: web app + Android NFC app (S12)
 

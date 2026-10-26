@@ -25,7 +25,7 @@ export function AssistantOverlay({
     onClose();
   };
 
-  const act = async (action: 'retryReader' | 'unregister' | 'quit' | 'reload') => {
+  const act = async (action: 'retryReader' | 'unregister' | 'quit' | 'reload' | 'extendOffline') => {
     setBusy(true);
     try {
       await call('assistantAction', { action });
@@ -80,8 +80,15 @@ export function AssistantOverlay({
             </dd>
             <dt>{t('kiosk.assistant.server')}</dt>
             <dd>{status.online ? t('kiosk.assistant.online') : t('kiosk.assistant.offline')}</dd>
+            <dt>{t('kiosk.assistant.pending')}</dt>
+            <dd className="k-mono">{status.offline.pending}</dd>
           </dl>
           <div className="grid gap-2">
+            {status.offline.readOnly && (
+              <Button variant="secondary" onClick={() => void act('extendOffline')}>
+                {t('kiosk.assistant.extendOffline')}
+              </Button>
+            )}
             <Button variant="secondary" loading={busy} onClick={() => void act('retryReader')}>
               {t('kiosk.assistant.retryReader')}
             </Button>

@@ -45,10 +45,11 @@ export function HomeStage({
   const { t } = useI18n();
   const [camera, setCamera] = useState(false);
   const readerMissing = status.reader.status === 'DISCONNECTED' || status.reader.status === 'ERROR';
-  const offline = !status.online;
+  const offline = !status.online && !status.offline.mode;
+  const offlineLending = status.offline.mode;
 
   const eye: ReaderEyeState =
-    mode === 'reading' ? 'reading' : mode === 'error' ? 'error' : offline ? 'offline' : 'idle';
+    mode === 'reading' ? 'reading' : mode === 'error' ? 'error' : offline || offlineLending ? 'offline' : 'idle';
 
   let headline = t('kiosk.tapPrompt');
   let sub: string | null = null;
@@ -60,6 +61,8 @@ export function HomeStage({
   } else if (readerMissing) {
     headline = t('kiosk.readerUnavailable');
     sub = t('kiosk.readerMissingHint');
+  } else if (offlineLending) {
+    sub = status.offline.readOnly ? t('kiosk.offlineReadOnly') : t('kiosk.offlineLending');
   }
 
   return (

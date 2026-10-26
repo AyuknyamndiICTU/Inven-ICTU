@@ -103,6 +103,8 @@ export function recoveryFor(code: string): ErrorRecovery {
       return 'tapAgain';
     case 'NOT_RECOGNISED':
     case 'FOREIGN_PHONE':
+    case 'OFFLINE_UNKNOWN_CARD':
+    case 'OFFLINE_PASSKEY':
       return 'manual';
     case 'STUDENT_INACTIVE':
     case 'CARD_AUTH_FAILED':
