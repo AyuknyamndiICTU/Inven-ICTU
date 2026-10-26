@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-26T23:10:47.676Z",
+  "machine": "developer laptop, in-process API + Docker Postgres/Redis (not representative of the lab server)",
+  "samples": 200,
+  "p50Ms": 13,
+  "p95Ms": 20,
+  "maxMs": 43,
+  "budgetP95Ms": 150,
+  "errors": 0
+}

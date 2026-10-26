@@ -27,6 +27,11 @@ export class OutboxService {
 type Handler = (event: DomainEvent, tx: Tx) => Promise<void>;
 type DirectHandler = (event: DomainEvent) => Promise<void> | void;
 
+/** BullMQ (5.x) rejects custom job ids containing ":"; one id per (consumer, event) keeps enqueueing idempotent. */
+export function durableJobId(consumer: string, eventId: string): string {
+  return `${consumer}__${eventId}`.replace(/:/g, '_');
+}
+
 /** Exactly-once effects on top of at-least-once delivery: one inbox row per (consumer, event). */
 @Injectable()
 export class InboxService {
@@ -96,7 +101,7 @@ export class EventBus implements OnModuleDestroy {
           'event',
           { consumer, event },
           {
-            jobId: `${consumer}:${event.id}`,
+            jobId: durableJobId(consumer, event.id),
             attempts: 6,
             backoff: { type: 'exponential', delay: 2000 },
             removeOnComplete: 1000,

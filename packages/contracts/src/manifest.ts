@@ -5,6 +5,7 @@ import type { ManifestEntry } from './client';
 export const routeManifest: Record<RouteId, ManifestEntry> = {
   'meta.health': { method: 'GET', path: '/health' },
   'meta.ready': { method: 'GET', path: '/ready' },
+  'meta.kiosksHealth': { method: 'GET', path: '/health/kiosks' },
   'files.get': { method: 'GET', path: '/files/:key', responseKind: 'binary' },
   'meta.appConfig': { method: 'GET', path: '/meta/app-config' },
   'auth.login': { method: 'POST', path: '/auth/login' },

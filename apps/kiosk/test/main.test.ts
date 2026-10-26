@@ -10,6 +10,7 @@ import { registerIpc } from '../src/main/ipc';
 import { KioskService, type SocketLike } from '../src/main/kiosk-service';
 import { scrub } from '../src/main/logger';
 import { FakeReader, hcePhone, lockedPhone, uidCard } from '../src/main/reader/fake-reader';
+import { socketTarget } from '../src/main/socket-target';
 import { commandChannel, type KioskEvent } from '../src/shared/ipc';
 import { contentSecurityPolicy, isAllowedPermission } from '../src/shared/security';
 import { MOCK, MockBackend } from './mock-backend';
@@ -321,6 +322,20 @@ describe('KioskService (main-process orchestration)', () => {
       info: { code: 'ASSISTANT_LOCKED' },
     });
     await k.service.stop();
+  });
+});
+
+describe('socketTarget (API behind a reverse-proxy prefix)', () => {
+  it('keeps the namespace and moves the prefix into the transport path', () => {
+    expect(socketTarget('https://labpass.example/api/kiosk')).toEqual({
+      url: 'https://labpass.example/kiosk',
+      path: '/api/socket.io',
+    });
+    expect(socketTarget('http://127.0.0.1:4000/kiosk')).toEqual({
+      url: 'http://127.0.0.1:4000/kiosk',
+      path: '/socket.io',
+    });
+    expect(socketTarget('https://labpass.example/api/kiosk/').path).toBe('/api/socket.io');
   });
 });
 

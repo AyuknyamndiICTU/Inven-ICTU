@@ -49,3 +49,9 @@ spikes/**/.pepper
 # Playwright e2e output (traces, finish-gate screenshots)
 .results/
 
+
+# Production deployment state (S14): secrets, backups, APK drops
+deploy/secrets/*
+!deploy/secrets/README.md
+deploy/backups/
+deploy/downloads/
