@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-26T21:17:29.915Z",
+  "machine": "developer laptop, in-process API + Docker Postgres/Redis (not representative of the lab server)",
+  "ops": 300,
+  "concurrency": 10,
+  "seconds": 9,
+  "throughputPerMin": 2025,
+  "p50Ms": 264,
+  "p95Ms": 499,
+  "maxMs": 646,
+  "errors": 0,
+  "drift": 0
+}

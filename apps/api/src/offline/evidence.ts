@@ -1,5 +1,6 @@
-import type { OfflineTransaction } from '@labpass/contracts';
+import { offlineTxMacInput, type OfflineTransaction } from '@labpass/contracts';
 import { b64urlDecode, parseResponseQr, verifyHceEvidence, verifyScanEvidence } from '@labpass/contracts/tap-node';
+import { timingSafeEqual } from 'node:crypto';
 
 export type ConflictReason =
   | 'INSUFFICIENT_STOCK'
@@ -9,24 +10,29 @@ export type ConflictReason =
   | 'INVALID_EVIDENCE'
   | 'UNKNOWN_LINE';
 
-/** What the sync needs to know about the credential or card named in the evidence. */
+/** What the sync needs to know about the credential, card or assistant named in the evidence. */
 export interface EvidenceLookups {
-  /** ACTIVE card binding owner for a raw UID (via the peppered HMAC), or null. */
-  cardOwner(uidHex: string): Promise<string | null>;
+  /** ACTIVE card binding for a raw UID (via the peppered HMAC), or null. */
+  card(uidHex: string): Promise<{ studentId: string; cardTech: string } | null>;
   credential(id: string): Promise<{
     studentId: string;
     status: string;
     kind: 'DEVICE_KEY' | 'PASSKEY';
     spki: Uint8Array | null;
   } | null>;
-  assistantActive(id: string): Promise<boolean>;
+  /** The per-kiosk MAC key of an active assistant for this bundle version, or null. */
+  assistantKey(id: string): Promise<Buffer | null>;
+  /** Records a phone nonce as used; false when it was already used (online or by an earlier sync). */
+  useNonce(credentialId: string, nonce: string): Promise<boolean>;
+  computeMac(key: Buffer, input: string): string;
 }
 
 export interface EvidenceContext {
   kioskId: string;
-  /** The window the kiosk was offline, widened by `skewMs` either side. */
+  /** The window the kiosk was offline, already bounded by the server (bundle issue time … now). */
   offlineFrom: number;
   offlineTo: number;
+  cardAuthMode: 'UID' | 'DESFIRE_PREFERRED' | 'DESFIRE_REQUIRED';
   skewMs?: number;
 }
 
@@ -34,13 +40,22 @@ export type EvidenceResult = { ok: true } | { ok: false; reason: ConflictReason 
 
 const bad = (reason: ConflictReason): EvidenceResult => ({ ok: false, reason });
 
+const sameB64 = (a: string, b: string) => {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
+};
+
 /**
- * Re-verifies offline identification evidence at sync time (ARCH §5 F9, S11.5 task 4).
- * The kiosk generated its own nonces offline, so instead of the online single-use challenge the signed timestamp
- * must fall inside the declared offline window; the txId is the replay guard (unique idempotency key).
+ * Re-verifies offline identification evidence at sync time (ARCH §5 F9, S11.5 task 4, S13 findings 1–3).
+ * The kiosk generated its own nonces offline, so instead of the online single-use challenge: the signed timestamp
+ * must fall inside the server-bounded window, and each phone nonce can back only one identification ever.
  */
 export async function checkEvidence(
-  tx: Pick<OfflineTransaction, 'studentId' | 'occurredAt' | 'evidence'>,
+  tx: Pick<
+    OfflineTransaction,
+    'txId' | 'studentId' | 'occurredAt' | 'evidence' | 'kind' | 'borrowLines' | 'returnLines'
+  >,
   ctx: EvidenceContext,
   look: EvidenceLookups,
 ): Promise<EvidenceResult> {
@@ -51,13 +66,18 @@ export async function checkEvidence(
 
   if (e.type === 'CARD') {
     if (!e.uid) return bad('INVALID_EVIDENCE');
-    const owner = await look.cardOwner(e.uid.toUpperCase());
-    if (!owner) return bad('CREDENTIAL_REVOKED');
-    return owner === tx.studentId ? { ok: true } : bad('INVALID_EVIDENCE');
+    const card = await look.card(e.uid.toUpperCase());
+    if (!card) return bad('CREDENTIAL_REVOKED');
+    if (card.studentId !== tx.studentId) return bad('INVALID_EVIDENCE');
+    // A copied UID must not bypass DESFire authentication just because the kiosk was offline.
+    if (ctx.cardAuthMode === 'DESFIRE_REQUIRED' && card.cardTech === 'DESFIRE_EV3') return bad('INVALID_EVIDENCE');
+    return { ok: true };
   }
 
   if (e.type === 'ASSISTANT') {
-    return (await look.assistantActive(e.assistantId)) ? { ok: true } : bad('INVALID_EVIDENCE');
+    const key = await look.assistantKey(e.assistantId);
+    if (!key) return bad('INVALID_EVIDENCE');
+    return sameB64(look.computeMac(key, offlineTxMacInput(tx)), e.mac) ? { ok: true } : bad('INVALID_EVIDENCE');
   }
 
   type KeyCheck = { spki: Uint8Array; error?: undefined } | { error: EvidenceResult; spki?: undefined };
@@ -82,7 +102,8 @@ export async function checkEvidence(
         ts: e.ts,
         signature: b64urlDecode(e.signature),
       });
-      return ok ? { ok: true } : bad('INVALID_EVIDENCE');
+      if (!ok) return bad('INVALID_EVIDENCE');
+      return (await look.useNonce(e.credentialId, e.nonce)) ? { ok: true } : bad('INVALID_EVIDENCE');
     }
 
     // SCAN: only device-key response QRs (LPR1) can be verified offline; passkey users are confirmed by an assistant.
@@ -97,7 +118,9 @@ export async function checkEvidence(
       ts: qr.ts,
       signature: qr.signature,
     });
-    return ok ? { ok: true } : bad('INVALID_EVIDENCE');
+    if (!ok) return bad('INVALID_EVIDENCE');
+    const nonce = Buffer.from(qr.nonce).toString('base64url');
+    return (await look.useNonce(qr.credentialId, nonce)) ? { ok: true } : bad('INVALID_EVIDENCE');
   } catch {
     return bad('INVALID_EVIDENCE');
   }

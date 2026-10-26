@@ -1,3 +1,4 @@
+import { offlineTxMacInput } from '@labpass/contracts';
 import type { OfflineBundle, OfflineTransaction, Receipt } from '@labpass/contracts';
 import {
   b64urlDecode,
@@ -7,7 +8,7 @@ import {
   verifyHceEvidence,
   verifyScanEvidence,
 } from '@labpass/contracts/tap-node';
-import { createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { createDecipheriv, createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import type { IdentifiedView, IdentifyView } from '../../shared/ipc';
 import { KioskApiError } from '../kiosk-api';
 
@@ -25,6 +26,9 @@ export interface OfflineState {
   availability: Record<string, number>;
   /** Units returned offline per loan line, so the student's open lines stay correct until sync. */
   returned: Record<string, number>;
+  /** Assistant PIN attempts, persisted so restarting the kiosk does not reset the lockout. */
+  pinFailures?: number;
+  pinLockedUntil?: number;
 }
 
 export interface OfflineDeps {
@@ -33,20 +37,36 @@ export interface OfflineDeps {
   wipe(): void;
   kioskId(): string | null;
   now?: () => number;
-  /** argon2id verification (hash-wasm in the kiosk, injectable in tests). */
-  verifyPin(pin: string, hash: string): Promise<boolean>;
+  /** argon2id raw digest for a PIN with the given encoded params+salt (hash-wasm in the kiosk, injectable in tests). */
+  argon2(pin: string, pinParams: string): Promise<Uint8Array>;
 }
 
 type Session = {
   studentId: string;
   method: OfflineTransaction['method'];
-  evidence: OfflineTransaction['evidence'];
+  evidence: OfflineTransaction['evidence'] | { type: 'ASSISTANT_PENDING'; assistantId: string; macKey: Buffer };
   expiresAt: number;
 };
 
 const CARD_CACHE_DAYS = 120;
 const SESSION_MS = 120_000;
 const NONCE_TTL_MS = 60_000;
+const PIN_MAX_FAILURES = 5;
+const PIN_LOCK_MS = 15 * 60_000;
+const WRAP_INFO = 'labpass-offline-assistant-wrap-v1';
+
+/** Unwraps the per-kiosk assistant MAC key; a wrong PIN gives a wrong digest and AES-GCM refuses it. */
+function unwrap(digest: Uint8Array, wrappedB64: string): Buffer | null {
+  try {
+    const raw = Buffer.from(wrappedB64, 'base64url');
+    const key = createHash('sha256').update(WRAP_INFO).update(digest).digest();
+    const d = createDecipheriv('aes-256-gcm', key, raw.subarray(0, 12));
+    d.setAuthTag(raw.subarray(raw.length - 16));
+    return Buffer.concat([d.update(raw.subarray(12, raw.length - 16)), d.final()]);
+  } catch {
+    return null;
+  }
+}
 
 const fail = (code: string, message: string, status = 422): never => {
   throw new KioskApiError({ code, status, message });
@@ -264,6 +284,9 @@ export class OfflineEngine {
   }
 
   identifyCard(uid: string): IdentifyView {
+    // A copied UID must not bypass DESFire authentication just because the server is unreachable (S13 finding 3).
+    if (this.state.bundle?.settings.cardAuthMode === 'DESFIRE_REQUIRED')
+      return fail('OFFLINE_UNKNOWN_CARD', 'Cards need a secure check that is impossible offline. Ask a lab assistant.');
     const hit = this.state.cards[this.cardLookup(uid)];
     if (!hit) return fail('OFFLINE_UNKNOWN_CARD', 'This card cannot be checked while offline. Ask a lab assistant.');
     return this.identified(hit!.studentId, 'CARD', {
@@ -337,12 +360,25 @@ export class OfflineEngine {
     const l = this.lookups.get(lookupId);
     if (!l || this.now() - l.at > 5 * 60_000)
       return fail('LOOKUP_EXPIRED', 'This entry has expired. Type the matricule again.', 400);
+    if ((this.state.pinLockedUntil ?? 0) > this.now())
+      return fail('VERIFICATION_LOCKED', 'Too many wrong PINs. Try again in 15 minutes.', 429);
     for (const a of this.state.bundle?.assistants ?? []) {
-      if (await this.d.verifyPin(pin, a.pinHash)) {
+      const macKey = unwrap(await this.d.argon2(pin, a.pinParams), a.wrappedKey);
+      if (macKey) {
         this.lookups.delete(lookupId);
-        return this.identified(l!.studentId, 'MANUAL', { type: 'ASSISTANT', assistantId: a.id });
+        this.state.pinFailures = 0;
+        this.persist();
+        const view = this.identified(l!.studentId, 'MANUAL', { type: 'ASSISTANT', assistantId: a.id, mac: '' });
+        this.session = { ...this.session!, evidence: { type: 'ASSISTANT_PENDING', assistantId: a.id, macKey } };
+        return view;
       }
     }
+    this.state.pinFailures = (this.state.pinFailures ?? 0) + 1;
+    if (this.state.pinFailures >= PIN_MAX_FAILURES) {
+      this.state.pinFailures = 0;
+      this.state.pinLockedUntil = this.now() + PIN_LOCK_MS;
+    }
+    this.persist();
     return fail('VERIFICATION_FAILED', 'That PIN is not right.', 400);
   }
 
@@ -361,18 +397,27 @@ export class OfflineEngine {
   }
 
   private record(s: Session, kind: 'BORROW' | 'RETURN', lines: Partial<OfflineTransaction>) {
-    const tx = {
+    const draft = {
       txId: randomUUID(),
       seq: ++this.state.seq,
       occurredAt: new Date(this.now()).toISOString(),
       kind,
       studentId: s.studentId,
       method: s.method,
-      evidence: s.evidence,
       borrowLines: [],
       returnLines: [],
       ...lines,
-    } as OfflineTransaction;
+    };
+    // Assistant-confirmed transactions carry an HMAC the server recomputes, so a kiosk token alone cannot forge them.
+    const evidence: OfflineTransaction['evidence'] =
+      s.evidence.type === 'ASSISTANT_PENDING'
+        ? {
+            type: 'ASSISTANT',
+            assistantId: s.evidence.assistantId,
+            mac: createHmac('sha256', s.evidence.macKey).update(offlineTxMacInput(draft)).digest('base64url'),
+          }
+        : s.evidence;
+    const tx = { ...draft, evidence } as OfflineTransaction;
     this.state.journal.push(tx);
     this.persist();
     this.session = null;

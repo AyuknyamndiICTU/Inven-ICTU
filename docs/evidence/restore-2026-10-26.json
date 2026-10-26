@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-26T22:22:22.7583484+01:00",
+  "source": "labpass",
+  "dumpBytes": 92544,
+  "seconds": 23.1,
+  "rowCounts": {
+    "mobile_credentials": {
+      "restored": 0,
+      "source": 0
+    },
+    "equipment": {
+      "restored": 30,
+      "source": 30
+    },
+    "loan_lines": {
+      "restored": 0,
+      "source": 0
+    },
+    "audit_logs": {
+      "restored": 3,
+      "source": 3
+    },
+    "stock_movements": {
+      "restored": 33,
+      "source": 33
+    },
+    "loans": {
+      "restored": 0,
+      "source": 0
+    },
+    "card_bindings": {
+      "restored": 0,
+      "source": 0
+    },
+    "students": {
+      "restored": 200,
+      "source": 200
+    }
+  },
+  "reconcileExitCode": 0,
+  "reconcileOutput": "OK: 30 equipment item(s), no drift."
+}

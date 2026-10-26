@@ -1,11 +1,13 @@
-import { b64urlEncode, hceMessage } from '@labpass/contracts/tap';
+import { offlineTxMacInput } from '@labpass/contracts';
+import { b64urlDecode, b64urlEncode, hceMessage } from '@labpass/contracts/tap';
 import { signDer } from '@labpass/contracts/tap-node';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { assistantMacKey, txMac } from '../../src/offline/assistant-key';
 import { hashSecret, uidHmac } from '../../src/platform/crypto/crypto';
 import { adminSession, bootTestApp, registerKiosk, type TestApp } from '../helpers/app';
 import { fakePhone, makeStudent } from '../helpers/identity';
-import { makeEquipment, signIn } from '../helpers/lending';
+import { challenge, makeEquipment, setSettings, signIn } from '../helpers/lending';
 
 /** S11.5 Verify: offline bundle, ordered replay, idempotent re-sync, conflicts in admin review, I2 preserved. */
 describe('Kiosk offline mode (S11.5)', () => {
@@ -68,10 +70,13 @@ describe('Kiosk offline mode (S11.5)', () => {
     expect(a.students.some((s: { id: string }) => s.id === w.ama.id)).toBe(true);
     expect(a.credentials).toEqual([expect.objectContaining({ credentialId: w.cred.id, kind: 'DEVICE_KEY' })]);
     expect(a.assistants).toEqual([expect.objectContaining({ id: w.assistant.id })]);
-    // Never cached: student PIN hashes, contacts, card UIDs.
+    // Never cached: student PIN hashes, contacts, card UIDs, assistant PIN digests.
     const text = JSON.stringify(a);
-    expect(text).not.toMatch(/manualPinHash|email|phone|uidHmac/);
+    expect(text).not.toMatch(/manualPinHash|email|phone|uidHmac|pinHash/);
     expect(text).not.toContain(w.uid);
+    const stored = (await t.prisma.adminUser.findUniqueOrThrow({ where: { id: w.assistant.id } })).assistantPinHash!;
+    expect(text).not.toContain(stored.slice(stored.lastIndexOf('$') + 1));
+    expect(a.assistants[0].pinParams).toBe(stored.slice(0, stored.lastIndexOf('$')));
   });
 
   it('replays in order, puts conflicts in review, and a second sync is a no-op', async () => {
@@ -150,6 +155,17 @@ describe('Kiosk offline mode (S11.5)', () => {
       bundleVersion: bundle.version,
       transactions,
     };
+    const t4 = transactions[3] as unknown as Parameters<typeof offlineTxMacInput>[0] & {
+      evidence: Record<string, unknown>;
+    };
+    t4.evidence = {
+      type: 'ASSISTANT',
+      assistantId: w.assistant.id,
+      mac: txMac(
+        assistantMacKey(t.env.APP_SECRET, w.assistant.id, kiosk.kioskId, bundle.version),
+        offlineTxMacInput(t4),
+      ),
+    };
 
     const first = await kioskCall('POST', '/kiosk/offline-sync', body);
     expect(first.statusCode).toBe(200);
@@ -218,7 +234,7 @@ describe('Kiosk offline mode (S11.5)', () => {
     const res = await kioskCall('POST', '/kiosk/offline-sync', {
       offlineFrom: new Date(Date.now() - 60_000).toISOString(),
       offlineTo: new Date().toISOString(),
-      bundleVersion: 0,
+      bundleVersion: (await kioskCall('GET', '/kiosk/offline-bundle')).json().version,
       transactions: [
         {
           txId: randomUUID(),
@@ -252,6 +268,83 @@ describe('Kiosk offline mode (S11.5)', () => {
       'CREDENTIAL_REVOKED',
       'INVALID_EVIDENCE',
     ]);
+    expect((await t.prisma.equipment.findUniqueOrThrow({ where: { id: w.cable.id } })).availableQuantity).toBe(10);
+  });
+
+  it('S13: captured signatures, forged assistant MACs, unknown bundles and DESFire-required cards are refused', async () => {
+    const w = await world();
+    const bundle = (await kioskCall('GET', '/kiosk/offline-bundle')).json();
+    // An online tap: its signature must never back an offline transaction later.
+    const nonce = await challenge(t, kiosk.token);
+    const ts = Date.now();
+    const online = {
+      method: 'HCE' as const,
+      credentialId: w.cred.id,
+      nonce,
+      ts,
+      signature: b64urlEncode(
+        signDer(w.phone.key.pkcs8, hceMessage(w.cred.id, b64urlDecode(nonce), kiosk.kioskId, ts)),
+      ),
+    };
+    expect((await kioskCall('POST', '/kiosk/identify', online)).json().status).toBe('IDENTIFIED');
+    const base = {
+      seq: 1,
+      occurredAt: new Date().toISOString(),
+      kind: 'BORROW' as const,
+      returnLines: [],
+      borrowLines: [{ equipmentId: w.cable.id, quantity: 1 }],
+    };
+    const replayed = {
+      ...base,
+      txId: randomUUID(),
+      studentId: w.brice.id,
+      method: 'HCE',
+      evidence: { type: 'HCE', ...online },
+    };
+    const forged = {
+      ...base,
+      seq: 2,
+      txId: randomUUID(),
+      studentId: w.ama.id,
+      method: 'MANUAL',
+      evidence: { type: 'ASSISTANT', assistantId: w.assistant.id, mac: 'A'.repeat(43) },
+    };
+    await t.prisma.cardBinding.updateMany({ where: { studentId: w.ama.id }, data: { cardTech: 'DESFIRE_EV3' } });
+    await setSettings(t, { cardAuthMode: 'DESFIRE_REQUIRED' });
+    const cloned = {
+      ...base,
+      seq: 3,
+      txId: randomUUID(),
+      studentId: w.ama.id,
+      method: 'CARD',
+      evidence: { type: 'CARD', uidLookup: 'AAAA', uid: w.uid },
+    };
+    const sync = (bundleVersion: number) =>
+      kioskCall('POST', '/kiosk/offline-sync', {
+        offlineFrom: new Date(Date.now() - 600_000).toISOString(),
+        offlineTo: new Date().toISOString(),
+        bundleVersion,
+        transactions: [replayed, forged, cloned],
+      });
+    const r = (await sync(bundle.version)).json();
+    expect(r.applied).toEqual([]);
+    expect(r.conflicts.map((c: { reason: string }) => c.reason)).toEqual([
+      'INVALID_EVIDENCE',
+      'INVALID_EVIDENCE',
+      'INVALID_EVIDENCE',
+    ]);
+    // Conflict payloads never keep the raw card UID.
+    expect(JSON.stringify(await t.prisma.offlineSyncConflict.findMany())).not.toContain(w.uid);
+    // A bundle version the server never issued is refused outright.
+    const unknown = (
+      await kioskCall('POST', '/kiosk/offline-sync', {
+        offlineFrom: new Date(Date.now() - 600_000).toISOString(),
+        offlineTo: new Date().toISOString(),
+        bundleVersion: 999,
+        transactions: [{ ...cloned, txId: randomUUID() }],
+      })
+    ).json();
+    expect(unknown.conflicts).toEqual([expect.objectContaining({ reason: 'BUNDLE_EXPIRED' })]);
     expect((await t.prisma.equipment.findUniqueOrThrow({ where: { id: w.cable.id } })).availableQuantity).toBe(10);
   });
 });

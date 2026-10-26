@@ -20,7 +20,10 @@
     "db:seed": "node -r @swc-node/register prisma/seed.ts",
     "ops:reconcile": "node -r @swc-node/register src/ops/reconcile.cli.ts",
     "bench:import": "node -r @swc-node/register test/bench/import.bench.ts",
-    "db:studio": "node scripts/prisma.cjs studio"
+    "db:studio": "node scripts/prisma.cjs studio",
+    "test:attacks": "vitest run test/attacks",
+    "test:journeys": "vitest run test/journeys",
+    "test:load": "vitest run test/load"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"
@@ -41,10 +44,10 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "bullmq": "^5.61.0",
     "exceljs": "^4.4.0",
-    "fastify": "5.11.3",
+    "fastify": "5.12.7",
     "ioredis": "^5.8.0",
     "libphonenumber-js": "^1.12.0",
-    "nodemailer": "^7.0.6",
+    "nodemailer": "^10.2.1",
     "otplib": "^12.0.1",
     "papaparse": "^5.5.3",
     "pino": "^9.13.0",
@@ -59,7 +62,7 @@
     "@swc/cli": "^0.7.8",
     "@swc/core": "^1.13.0",
     "@types/node": "^22.18.0",
-    "@types/nodemailer": "^7.0.2",
+    "@types/nodemailer": "^8.0.2",
     "@types/papaparse": "^5.3.16",
     "@types/web-push": "^3.6.4",
     "fast-check": "^4.3.0",

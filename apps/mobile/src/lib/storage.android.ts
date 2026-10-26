@@ -29,3 +29,6 @@ export const prefsStore = {
   get: (k: string) => get(`labpass.pref.${k}`),
   set: (k: string, v: string | null) => set(`labpass.pref.${k}`, v),
 };
+
+/** The Android app has no service worker cache. */
+export async function clearCachedApi(): Promise<void> {}

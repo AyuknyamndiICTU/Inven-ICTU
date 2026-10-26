@@ -21,3 +21,5 @@ nodeLinker: hoisted
 overrides:
   react: 19.1.0
   react-dom: 19.1.0
+  # S13: one patched fastify for the API and @nestjs/platform-fastify (security advisories < 5.12.5).
+  fastify: 5.12.7

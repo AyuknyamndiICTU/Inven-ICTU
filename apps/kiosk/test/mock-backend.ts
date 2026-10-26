@@ -2,9 +2,9 @@
  * In-memory LabPass API for kiosk tests and the Playwright e2e (no database). It mirrors the contract closely —
  * every response is validated by the kiosk's client — and checks real HCE signatures against the tap vectors.
  */
-import { defaultSettings, KioskConfig } from '@labpass/contracts';
+import { defaultSettings, KioskConfig, offlineTxMacInput } from '@labpass/contracts';
 import { b64urlDecode, b64urlEncode, verifyHceEvidence } from '@labpass/contracts/tap-node';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createCipheriv, createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { createRequire } from 'node:module';
 import type { AddressInfo } from 'node:net';
@@ -540,10 +540,38 @@ export class MockBackend {
           webauthnCredentialId: null,
         },
       ],
-      assistants: this.assistantPinHash
-        ? [{ id: this.assistantId, name: 'Lab assistant', pinHash: this.assistantPinHash }]
-        : [],
-      settings: { blockWhenOverdue: true, maxItemsPerStudent: null, offlineMaxHours: 8 },
+      assistants: this.assistantPinHash ? [this.assistantEntry(this.bundleVersion)] : [],
+      settings: {
+        blockWhenOverdue: true,
+        maxItemsPerStudent: null,
+        offlineMaxHours: 8,
+        cardAuthMode: this.cardAuthMode,
+      },
+    };
+  }
+
+  cardAuthMode: 'UID' | 'DESFIRE_PREFERRED' | 'DESFIRE_REQUIRED' = 'UID';
+  private readonly appSecret = 'mock-app-secret-for-offline-assistant-keys';
+
+  /** Same construction as the API (apps/api/src/offline/assistant-key.ts). */
+  private macKey(version: number) {
+    return createHmac('sha256', this.appSecret)
+      .update(`offline-assistant:${this.assistantId}:${MOCK.kioskId}:${version}`)
+      .digest();
+  }
+
+  private assistantEntry(version: number) {
+    const i = this.assistantPinHash.lastIndexOf('$');
+    const digest = Buffer.from(this.assistantPinHash.slice(i + 1), 'base64');
+    const wrapKey = createHash('sha256').update('labpass-offline-assistant-wrap-v1').update(digest).digest();
+    const iv = randomBytes(12);
+    const c = createCipheriv('aes-256-gcm', wrapKey, iv);
+    const ct = Buffer.concat([c.update(this.macKey(version)), c.final()]);
+    return {
+      id: this.assistantId,
+      name: 'Lab assistant',
+      pinParams: this.assistantPinHash.slice(0, i),
+      wrappedKey: Buffer.concat([iv, ct, c.getAuthTag()]).toString('base64url'),
     };
   }
 
@@ -560,6 +588,16 @@ export class MockBackend {
         continue;
       }
       this.synced.add(txId);
+      const ev = t.evidence as { type?: string; mac?: string } | undefined;
+      if (ev?.type === 'ASSISTANT') {
+        const expected = createHmac('sha256', this.macKey(Number(b.bundleVersion)))
+          .update(offlineTxMacInput(t as Parameters<typeof offlineTxMacInput>[0]))
+          .digest('base64url');
+        if (expected !== ev.mac) {
+          conflicts.push({ txId, reason: 'INVALID_EVIDENCE' });
+          continue;
+        }
+      }
       if (t.kind === 'BORROW') {
         const lines = t.borrowLines as Array<{ equipmentId: string; quantity: number }>;
         if (lines.some((l) => this.equipment.find((e) => e.id === l.equipmentId)!.available < l.quantity)) {

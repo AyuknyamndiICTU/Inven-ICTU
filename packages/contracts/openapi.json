@@ -6955,14 +6955,19 @@
                           "name": {
                             "type": "string"
                           },
-                          "pinHash": {
+                          "pinParams": {
                             "type": "string"
+                          },
+                          "wrappedKey": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]+$"
                           }
                         },
                         "required": [
                           "id",
                           "name",
-                          "pinHash"
+                          "pinParams",
+                          "wrappedKey"
                         ],
                         "additionalProperties": false
                       }
@@ -6989,12 +6994,21 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "cardAuthMode": {
+                          "type": "string",
+                          "enum": [
+                            "UID",
+                            "DESFIRE_PREFERRED",
+                            "DESFIRE_REQUIRED"
+                          ]
                         }
                       },
                       "required": [
                         "blockWhenOverdue",
                         "maxItemsPerStudent",
-                        "offlineMaxHours"
+                        "offlineMaxHours",
+                        "cardAuthMode"
                       ],
                       "additionalProperties": false
                     }
@@ -7266,11 +7280,16 @@
                                   "type": "string",
                                   "format": "uuid",
                                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "mac": {
+                                  "type": "string",
+                                  "pattern": "^[A-Za-z0-9_-]+$"
                                 }
                               },
                               "required": [
                                 "type",
-                                "assistantId"
+                                "assistantId",
+                                "mac"
                               ]
                             }
                           ]

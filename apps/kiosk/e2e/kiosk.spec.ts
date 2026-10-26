@@ -86,14 +86,21 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await app?.close().catch(() => undefined);
-  await backend?.close();
   try {
     process.stderr.write(`[kiosk.log]\n${readFileSync(join(userData, 'logs', 'kiosk.log'), 'utf8')}\n`);
   } catch {
     // No log written.
   }
-  rmSync(userData, { recursive: true, force: true });
+  // The window is not closable during the run, so exit the app directly.
+  await app?.evaluate(({ app: a }) => a.exit(0)).catch(() => undefined);
+  await backend?.close();
+  // Electron releases its profile files shortly after exit; a leftover temp folder is harmless.
+  await new Promise((r) => setTimeout(r, 1500));
+  try {
+    rmSync(userData, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+  } catch {
+    // Ignored.
+  }
 });
 
 test('first run: register with the admin code and choose a service PIN', async () => {
