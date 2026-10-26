@@ -42,6 +42,7 @@ export class CardKeyStore {
       }
       this.keys.set(Number(m[1]), hexToBytes(m[2]!));
     }
+    if (this.keys.size) this.logger.log(`DESFire key versions loaded: ${[...this.keys.keys()].sort().join(', ')}`);
   }
 
   get configured() {

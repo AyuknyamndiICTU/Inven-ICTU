@@ -35,15 +35,15 @@ Status: ⬜ Not started · 🟨 In progress · ✅ Completed · ⛔ Blocked
 | 1 · De-risk & foundation | [M1 Hardware de-risked, protocol frozen](#m1--hardware-de-risked--tap-protocol-frozen-s01) | S01               | W1–W4         | 0 / 14        | ⛔ hardware purchase |
 |                          | [M2 Foundation ready](#m2--foundation-ready-s02)                                           | S02               | W1–W2         | 10 / 10       | ✅                   |
 | 2 · Core backend         | [M3 Contract & platform](#m3--contract--platform-s03-s04)                                  | S03, S04          | W3–W5         | 21 / 21       | ✅                   |
-|                          | [M4 Identity & lending engine](#m4--identity--lending-engine-s05--s06)                     | S05, S06          | W6–W8         | 19 / 21       | 🟨                   |
+|                          | [M4 Identity & lending engine](#m4--identity--lending-engine-s05--s06)                     | S05, S06          | W6–W8         | 20 / 21       | 🟨                   |
 |                          | [M5 Low-stock alerts](#m5--low-stock-alerts-dev-verified-s07)                              | S07               | W9–W10        | 8 / 11        | 🟨                   |
 | 3 · Design system        | [M6 UI kit & signature theatre](#m6--ui-kit--signature-theatre-s08a-s08b)                  | S08a, S08b        | W3–W7         | 11 / 13       | 🟨                   |
 | 4 · Product surfaces     | [M7 Admin console](#m7--admin-console-s09-s10)                                             | S09, S10          | W9–W13        | 12 / 16       | 🟨                   |
-|                          | [M8 Kiosk app](#m8--kiosk-app-s11-s065-s115)                                               | S11, S06.5, S11.5 | W9–W15        | 15 / 28       | 🟨                   |
-|                          | [M9 Student app: web + Android](#m9--student-app-web-app--android-nfc-app-s12)             | S12               | W9–W13        | 0 / 11        | ⬜                   |
-| 5 · Hardening            | [M10 Release candidate](#m10--release-candidate-s13)                                       | S13               | W16–W17       | 0 / 10        | ⬜                   |
-| 6 · Launch               | [M11 Production, pilot & go-live](#m11--production-pilot--go-live-s14)                     | S14               | W18–W21       | 0 / 19        | ⬜                   |
-|                          | **Total**                                                                                  | 18 steps          | ~21 weeks     | **116 / 202** |                      |
+|                          | [M8 Kiosk app](#m8--kiosk-app-s11-s065-s115)                                               | S11, S06.5, S11.5 | W9–W15        | 23 / 28       | 🟨                   |
+|                          | [M9 Student app: web + Android](#m9--student-app-web-app--android-nfc-app-s12)             | S12               | W9–W13        | 5 / 11        | 🟨                   |
+| 5 · Hardening            | [M10 Release candidate](#m10--release-candidate-s13)                                       | S13               | W16–W17       | 7 / 10        | 🟨                   |
+| 6 · Launch               | [M11 Production, pilot & go-live](#m11--production-pilot--go-live-s14)                     | S14               | W18–W21       | 5 / 19        | 🟨                   |
+|                          | **Total**                                                                                  | 18 steps          | ~21 weeks     | **142 / 202** |                      |
 
 \* Indicative, for a team of 3–4 developers. Phases 2 and 3 run in parallel, and so do M7–M9. The kiosk (M8) runs 2 weeks longer than in v1.1 because of offline mode and DESFire. Refine the dates after M1.
 
@@ -193,7 +193,7 @@ Owner: AyuknyamndiICTU · Started: 2026-10-23 · Completed: —
 - [x] (c) `/me` self-service, lost-phone revoke; admin approve/reject/revoke
 - [x] (c) Push channels: Expo push (Android app) + Web Push (web app), `/me/push-token`
 - [x] **Acceptance:** name, file, malicious-file, import-rollback and enrollment-race fixtures pass
-- [/] **Acceptance:** 50k-row import in < 60 s with RSS < 300 MB; `pii-detector` review is clean — 80 s / 456 MB on the heavily loaded dev laptop; re-measure on the server; ⛔ `pii-detector` review in S13
+- [/] **Acceptance:** 50k-row import in < 60 s with RSS < 300 MB; `pii-detector` review is clean — re-measured 2026-10-26: **35 s ✅**, peak RSS 496 MB (231 MB harness baseline + 265 MB import) ❌ over the 300 MB budget, inside the 768 MB API container limit; streaming import planned ([evidence](../../docs/evidence/import-2026-10-26.json)); personal-data review done in S13 (threat model) ✅
 
 **[S06 · Inventory, loans & identify](./03-steps-foundation-backend.md#s06--operations-inventory-loans--identify-the-core-engine)**, in PR slices
 
@@ -205,7 +205,7 @@ Owner: AyuknyamndiICTU · Started: 2026-10-23 · Completed: —
 - [x] (d) Admin loans, force-return, overdue job, `/me/loans`, realtime deltas
 - [x] (d) Reports with safe, audited exports; `pnpm ops:reconcile`
 - [x] **Acceptance:** the concurrency suite passes 20 runs in a row
-- [/] **Acceptance:** positive and malformed vectors pass over HTTP; identify p95 < 150 ms — vectors pass; identify p95 benchmark runs in S13 on the target server
+- [x] **Acceptance:** positive and malformed vectors pass over HTTP; identify p95 < 150 ms — vectors pass; identify p95 **20–32 ms** over two runs (200 taps each, 0 errors) ([evidence](../../docs/evidence/identify-2026-10-26.json)); re-run on the lab server in the pilot
 - [x] **Acceptance:** property tests hold invariant I2; `ops:reconcile` reports 0 drift; an unverified manual entry cannot borrow
 
 ### M5 · Low-stock alerts, dev-verified (S07)
@@ -372,19 +372,19 @@ Owner: AyuknyamndiICTU · Started: 2026-10-26 · Completed: — · Details: [S13
 
 ### M11 · Production, pilot & go-live (S14)
 
-Owner: — · Started: — · Completed: — · Details: [S14](./04-steps-surfaces-release.md#s14--deployment-pilot--handover)
+Owner: — · Started: 2026-10-26 (software) · Completed: — · Details: [S14](./04-steps-surfaces-release.md#s14--deployment-pilot--handover)
 
 **Production**
 
 - [ ] ICTU IT decides on the **code-signing certificate** (Q12): signed builds + auto-update, or manual kiosk updates with a runbook
 - [ ] **Data-protection sign-off** from ICTU's legal officer before any real student data is imported (Q11)
 - [ ] Production domain + publicly trusted TLS; public reachability configured if approved (Q13)
-- [ ] `deploy/compose.prod.yml` (api, worker, admin, web app + APK page, postgres, redis, Caddy)
-- [ ] Encrypted nightly backups + a tested restore runbook
-- [ ] Monitoring: Uptime Kuma, GlitchTip/Sentry, kiosk-offline alert
+- [x] `deploy/compose.prod.yml` (api, worker, migrate, admin, web app + APK downloads, postgres, redis, Caddy, backup, optional uptime-kuma): healthchecks, limits, restart policies, Docker secret, per-release tags; full stack brought up locally as a staging run (S14)
+- [x] Encrypted nightly backups (`deploy/backup`: pg_dump + files, age, 14 days, heartbeat) + restore runbook; restore drill evidenced ([backup-restore.md](../../docs/runbooks/backup-restore.md))
+- [/] Monitoring: Uptime Kuma (profile `monitoring`) ✅, kiosk-offline alert via `GET /api/health/kiosks` ✅, backup heartbeat ✅ ([monitoring.md](../../docs/runbooks/monitoring.md)); GlitchTip/Sentry deferred (documented)
 - [ ] **Real-channel gate:** real email, SMS and WhatsApp alerts delivered (or a signed deferral)
 - [ ] Kiosk installed: driver, signed build, registration, restricted account, power settings
-- [ ] Student apps: web app at `/app` + signed APK at `/download/android`, announced with lab posters/QR codes (app stores optional later)
+- [/] Student apps: web app served at the site root (same origin as `/api`, ADR-0010) ✅ and APK drop folder `/downloads` ✅; ⏳ signed APK build (signing key, ICTU IT) and lab posters/QR codes
 - [ ] Real SIS import (dry run, then commit)
 - [ ] Supplier **card-batch import** + acceptance test on the first batch + DESFire key ceremony (ADR-0008), then `cardAuthMode=DESFIRE_PREFERRED`
 
@@ -395,9 +395,9 @@ Owner: — · Started: — · Completed: — · Details: [S14](./04-steps-surfac
 
 **Handover**
 
-- [ ] Admin guide (EN/FR) + one-page lab-assistant card
-- [ ] Runbooks: reader, kiosk re-register, restore, secrets rotation, add admin, WhatsApp template, manual kiosk update, kiosk offline mode, DESFire key escrow
-- [ ] ADR index
+- [x] Admin guide ([EN](../../docs/guides/admin-guide.en.md) / [FR](../../docs/guides/admin-guide.fr.md)) + one-page [lab-assistant card](../../docs/guides/lab-assistant-card.md); ⏳ screenshots once ICTU branding lands
+- [x] Runbooks ([index](../../docs/runbooks/README.md)): deploy/upgrade/rollback, reader + kiosk re-register + manual update (kiosk.md), backup/restore, monitoring, secrets rotation + add admin, WhatsApp template, kiosk offline mode, DESFire key escrow
+- [x] ADR index ([docs/adr/README.md](../../docs/adr/README.md)), plus the missing ADR-0007 (Android attestation)
 
 **Acceptance (go-live)**
 

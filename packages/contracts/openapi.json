@@ -158,6 +158,62 @@
         }
       }
     },
+    "/health/kiosks": {
+      "get": {
+        "operationId": "meta.kiosksHealth",
+        "summary": "Monitoring: 503 when an active kiosk has not sent a heartbeat for 5 minutes (Uptime Kuma)",
+        "tags": [
+          "platform"
+        ],
+        "security": [],
+        "x-auth": "public",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "ok"
+                    },
+                    "active": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "stale": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "active",
+                    "stale"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/files/{key}": {
       "get": {
         "operationId": "files.get",

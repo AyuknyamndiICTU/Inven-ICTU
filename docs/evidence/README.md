@@ -1,9 +1,11 @@
 # Evidence (S13 / S14)
 
-| File                      | What it proves                                                                   | How to regenerate                                                                                                           |
-| ------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `load-YYYY-MM-DD.json`    | 300 identify + borrow, 10 kiosks in parallel: errors, p50/p95/max latency, drift | `pnpm --filter @labpass/api exec vitest run test/load` (in-process); on the lab server: `k6 run tests/load/class-change.js` |
-| `restore-YYYY-MM-DD.json` | Backup → restore into a clean database → equal row counts → reconcile = 0        | `pwsh scripts/ops/restore-drill.ps1`                                                                                        |
+| File                       | What it proves                                                                                 | How to regenerate                                                                                                           |
+| -------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `load-YYYY-MM-DD.json`     | 300 identify + borrow, 10 kiosks in parallel: errors, p50/p95/max latency, drift               | `pnpm --filter @labpass/api exec vitest run test/load` (in-process); on the lab server: `k6 run tests/load/class-change.js` |
+| `restore-YYYY-MM-DD.json`  | Backup → restore into a clean database → equal row counts → reconcile = 0                      | `pwsh scripts/ops/restore-drill.ps1`                                                                                        |
+| `identify-YYYY-MM-DD.json` | Card tap → student shown, server side: p50/p95/max over 200 identifies (budget p95 < 150 ms)   | `pnpm --filter @labpass/api exec vitest run test/load/identify-latency.test.ts`                                             |
+| `import-YYYY-MM-DD.json`   | 50 000-student import (preview + commit): time (budget < 60 s) and peak memory (budget 300 MB) | `pnpm --filter @labpass/api bench:import` (runs against `labpass_test`)                                                     |
 
 Other S13 evidence lives in the test suites (run in CI and before every release):
 

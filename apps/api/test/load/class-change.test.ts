@@ -25,7 +25,7 @@ describe('load: class change', () => {
 
   it(`${OPS} identify + borrow with ${CONCURRENCY} in flight: no errors, no drift, p95 recorded`, async () => {
     // Several kiosks share the class-change load; each stays under its per-kiosk identify rate limit (60/min).
-    const kiosks = [];
+    const kiosks: Array<Awaited<ReturnType<typeof registerKiosk>>> = [];
     for (let i = 0; i < CONCURRENCY; i++) kiosks.push(await registerKiosk(t, `Load kiosk ${i}`));
     const items: Array<{ id: string }> = [];
     for (let i = 0; i < 5; i++) items.push(await makeEquipment(t, { qty: OPS, name: `Load item ${i}` }));

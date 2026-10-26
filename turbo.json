@@ -6,6 +6,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["LABPASS_API_ORIGIN", "EXPO_PUBLIC_*"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "out/**", "generated/**"]
     },
     "lint": {

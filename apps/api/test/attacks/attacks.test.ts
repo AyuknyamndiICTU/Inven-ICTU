@@ -156,4 +156,23 @@ describe('attacks (S13 STRIDE)', () => {
     const { cookie } = await adminSession(t, 'VIEWER');
     expect((await t.request({ method: 'GET', url: '/offline-conflicts', cookie })).statusCode).toBe(403);
   });
+
+  it('monitoring: /health/kiosks reports stale kiosks with counts only (no names)', async () => {
+    await t.request({
+      method: 'POST',
+      url: '/kiosk/heartbeat',
+      bearer: kiosk.token,
+      origin: null,
+      payload: { appVersion: '0.1.0', readerStatus: 'CONNECTED' },
+    });
+    const ok = await t.request({ method: 'GET', url: '/health/kiosks', origin: null });
+    expect(ok.json()).toEqual({ status: 'ok', active: 1, stale: 0 });
+    await t.prisma.kiosk.update({
+      where: { id: kiosk.kioskId },
+      data: { lastSeenAt: new Date(Date.now() - 10 * 60_000) },
+    });
+    const down = await t.request({ method: 'GET', url: '/health/kiosks', origin: null });
+    expect(down.statusCode).toBe(503);
+    expect(down.body).not.toContain('Cisco Lab Kiosk');
+  });
 });

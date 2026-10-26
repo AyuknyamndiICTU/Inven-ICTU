@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-26T23:54:40.7454991+01:00",
+  "machine": "developer laptop, ts-node style loader (@swc-node/register), Docker Postgres",
+  "rows": 50000,
+  "fileMB": 4,
+  "previewSeconds": 2.9,
+  "commitSeconds": 32.1,
+  "totalSeconds": 35.0,
+  "budgetSeconds": 60,
+  "peakRssMB": 496,
+  "baselineRssMB": 231,
+  "importDeltaMB": 265,
+  "budgetRssMB": 300,
+  "status": "time PASS, memory over budget (streaming import planned); API container limit 768 MB"
+}

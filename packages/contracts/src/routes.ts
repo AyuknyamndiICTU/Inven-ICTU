@@ -64,6 +64,14 @@ export const routes = def({
     summary: 'Readiness (DB + Redis)',
     response: z.object({ status: z.literal('ready'), db: z.boolean(), redis: z.boolean() }),
   },
+  'meta.kiosksHealth': {
+    method: 'GET',
+    path: '/health/kiosks',
+    auth: 'public',
+    tag: 'platform',
+    summary: 'Monitoring: 503 when an active kiosk has not sent a heartbeat for 5 minutes (Uptime Kuma)',
+    response: z.object({ status: z.literal('ok'), active: z.int(), stale: z.int() }),
+  },
   'files.get': {
     method: 'GET',
     path: '/files/:key',

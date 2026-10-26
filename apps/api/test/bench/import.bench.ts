@@ -26,6 +26,8 @@ async function main() {
     );
   }
   const file = Buffer.from(`\uFEFF${lines.join('\r\n')}`, 'utf8');
+  global.gc?.();
+  const baseline = process.memoryUsage().rss;
   let peak = 0;
   const sampler = setInterval(() => (peak = Math.max(peak, process.memoryUsage().rss)), 100);
   const t0 = performance.now();
@@ -38,7 +40,7 @@ async function main() {
   const mb = (b: number) => Math.round(b / 1024 / 1024);
   const total = (t2 - t0) / 1000;
   console.log(
-    `rows=${rows} file=${mb(file.length)}MB preview=${((t1 - t0) / 1000).toFixed(1)}s commit=${((t2 - t1) / 1000).toFixed(1)}s total=${total.toFixed(1)}s peakRSS=${mb(peak)}MB`,
+    `rows=${rows} file=${mb(file.length)}MB preview=${((t1 - t0) / 1000).toFixed(1)}s commit=${((t2 - t1) / 1000).toFixed(1)}s total=${total.toFixed(1)}s peakRSS=${mb(peak)}MB baselineRSS=${mb(baseline)}MB importDelta=${mb(peak - baseline)}MB`,
   );
   console.log(`counts=${JSON.stringify(done.counts)} status=${done.status}`);
   await resetDb(prisma);

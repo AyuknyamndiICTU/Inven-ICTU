@@ -1,5 +1,6 @@
-/* Idempotent development seed: categories, ~30 Cisco lab items (with ledger entries), 200 SYNTHETIC students,
- * one SUPER_ADMIN. Running it twice changes nothing. Never seed real student data here. */
+/* Idempotent seed: categories, ~30 Cisco lab items (with ledger entries), 200 SYNTHETIC students, one SUPER_ADMIN.
+ * With NODE_ENV=production only the categories and the SUPER_ADMIN are created (LABPASS_SEED_DEMO=1 overrides).
+ * Running it twice changes nothing. Never seed real student data here. */
 import { hash } from '@node-rs/argon2';
 import { PrismaClient } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
@@ -138,6 +139,9 @@ function syntheticStudent(i: number) {
 }
 
 async function main() {
+  // Production (first install): categories + the first SUPER_ADMIN only. Demo items and synthetic students would sit
+  // next to the registrar's real import and invent stock, so they need an explicit opt-in there.
+  const demo = process.env.NODE_ENV !== 'production' || process.env.LABPASS_SEED_DEMO === '1';
   const catIds = new Map<string, string>();
   for (const [i, [name, icon]] of categories.entries()) {
     const c = await prisma.equipmentCategory.upsert({
@@ -149,7 +153,7 @@ async function main() {
   }
 
   let createdItems = 0;
-  for (const [code, name, category, qty, threshold] of equipment) {
+  for (const [code, name, category, qty, threshold] of demo ? equipment : []) {
     const exists = await prisma.equipment.findUnique({ where: { code } });
     if (exists) continue;
     await prisma.$transaction(async (tx) => {
@@ -178,7 +182,7 @@ async function main() {
   }
 
   const studentsBefore = await prisma.student.count();
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < (demo ? 200 : 0); i++) {
     const s = syntheticStudent(i);
     await prisma.student.upsert({ where: { matricule: s.matricule }, update: {}, create: s });
   }

@@ -11,6 +11,7 @@ import { ConfigStore } from './config';
 import { eventSender, registerIpc } from './ipc';
 import { KioskService, type SocketFactory } from './kiosk-service';
 import { RotatingLog } from './logger';
+import { socketTarget } from './socket-target';
 import { OfflineEngine, type OfflineState } from './offline/engine';
 import { argon2Digest } from './offline/argon2';
 import { EncryptedStore } from './offline/store';
@@ -85,12 +86,15 @@ function hardenSession() {
   session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'media');
 }
 
-const socketFactory: SocketFactory = (url, token) =>
-  io(url, {
+const socketFactory: SocketFactory = (namespaceUrl, token) => {
+  const target = socketTarget(namespaceUrl);
+  return io(target.url, {
+    path: target.path,
     auth: { token },
     transports: ['websocket'],
     reconnectionDelayMax: 10_000,
   });
+};
 
 function createReader(): { driver: ReaderDriver; simulate?: (scenario: Scenario) => void } {
   const choice = process.env.LABPASS_READER ?? (isDev ? 'fake' : 'pcsc');

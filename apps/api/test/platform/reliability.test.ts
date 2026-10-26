@@ -1,6 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { API_ENV, type ApiEnv } from '../../src/config/env';
 import { IdempotencyService } from '../../src/platform/idempotency/idempotency.service';
-import { EventBus, InboxService, OutboxService } from '../../src/platform/outbox/outbox';
+import { durableJobId, EventBus, InboxService, OutboxService } from '../../src/platform/outbox/outbox';
+import { RedisService } from '../../src/platform/redis/redis.service';
 import { bootTestApp, type TestApp } from '../helpers/app';
 
 describe('idempotency (ARCH §5 F5, ADR-0006)', () => {
@@ -101,5 +104,28 @@ describe('transactional outbox + inbox', () => {
     const results = await Promise.all([run(), run(), run()]);
     expect(results.filter(Boolean)).toHaveLength(1);
     expect(await t.prisma.auditLog.count({ where: { entity: 'inbox-test' } })).toBe(1);
+  });
+
+  it('delivers durable consumers through the BullMQ queue (WORKER_MODE inline/separate)', async () => {
+    // Regression (S14): BullMQ 5 rejected the "consumer:eventId" job id, so every relay tick failed in production.
+    expect(durableJobId('alerts:low-stock', 'e1')).not.toContain(':');
+    const env = { ...t.app.get<ApiEnv>(API_ENV), WORKER_MODE: 'inline' as const };
+    const bus = new EventBus(t.app.get(InboxService), t.app.get(RedisService), env);
+    const got: string[] = [];
+    bus.register('queue:consumer', ['QueueEvent'], async (e) => {
+      got.push((e.payload as { tag: string }).tag);
+    });
+    try {
+      bus.startWorker(1);
+      await bus.dispatch({
+        id: randomUUID(),
+        type: 'QueueEvent',
+        payload: { tag: 'via-queue' },
+        createdAt: new Date().toISOString(),
+      });
+      await expect.poll(() => got, { timeout: 10_000 }).toEqual(['via-queue']);
+    } finally {
+      await bus.onModuleDestroy();
+    }
   });
 });
