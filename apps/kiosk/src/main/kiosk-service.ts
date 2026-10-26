@@ -305,6 +305,11 @@ export class KioskService {
     return this.session.token;
   }
 
+  /** A newer tap may have replaced the session while a request was in flight; only clear the one that was used. */
+  private clearSession(used: string) {
+    if (this.session?.token === used) this.session = null;
+  }
+
   private requireRegistered() {
     if (!this.d.store.registered) fail('NOT_REGISTERED', 'This kiosk is not registered', 409);
   }
@@ -392,7 +397,7 @@ export class KioskService {
       const session = this.requireSession();
       const receipt = await this.api.call('kiosk.signIn', { body: { session, lines }, idempotencyKey });
       this.d.log.info('lending.signIn', String(lines.length));
-      this.session = null;
+      this.clearSession(session);
       return receipt;
     },
 
@@ -400,7 +405,7 @@ export class KioskService {
       const session = this.requireSession();
       const receipt = await this.api.call('kiosk.signOut', { body: { session, lines }, idempotencyKey });
       this.d.log.info('lending.signOut', String(lines.length));
-      this.session = null;
+      this.clearSession(session);
       return receipt;
     },
 
