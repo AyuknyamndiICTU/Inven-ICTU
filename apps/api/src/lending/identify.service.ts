@@ -218,7 +218,13 @@ export class IdentifyService {
       throw notRecognised();
     // Verified first, consumed second: garbage cannot burn a live challenge, and a valid signature works once.
     if (!(await this.challenges.consume(kioskId, nonce))) throw notRecognised();
+    await this.rememberNonce(cred.id, b.nonce);
     return this.identified(kioskId, cred.student, 'HCE', null);
+  }
+
+  /** Durable record of nonces phones have signed, so a captured signature cannot back an offline sync later. */
+  private async rememberNonce(credentialId: string, nonce: string) {
+    await this.prisma.usedEvidenceNonce.createMany({ data: [{ credentialId, nonce }], skipDuplicates: true });
   }
 
   /** Offline phone fallback: the kiosk webcam reads the phone's response QR (LPR1 device key / LPR2 passkey). */
@@ -262,6 +268,7 @@ export class IdentifyService {
     if (!verifyScanEvidence(new Uint8Array(cred.publicKeySpki), { credentialId, nonce, kioskId, ts, signature }))
       throw notRecognised();
     if (!(await this.challenges.consume(kioskId, nonce))) throw notRecognised();
+    await this.rememberNonce(credentialId, b64urlEncode(nonce));
     return cred;
   }
 

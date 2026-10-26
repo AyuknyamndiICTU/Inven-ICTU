@@ -7,7 +7,7 @@ export default defineConfig({
   main: {
     // Bundle the runtime dependencies so the installer ships no node_modules (electron-builder.yml).
     // Only Electron, Node built-ins and the optional native PC/SC binding (loaded at runtime) stay external.
-    plugins: [externalizeDepsPlugin({ exclude: ['@labpass/contracts', 'zod', 'socket.io-client', 'hash-wasm'] })],
+    plugins: [externalizeDepsPlugin({ exclude: ['@labpass/contracts', 'zod', 'hash-wasm'] })],
     build: {
       rollupOptions: {
         input: {

@@ -22,3 +22,4 @@ export type { Loan, Receipt } from './schemas/lending';
 export type { DirectoryImportDto } from './schemas/students';
 export type { StudentTokens } from './schemas/enrollment';
 export type { OfflineBundle, OfflineTransaction } from './schemas/offline';
+export { offlineTxMacInput } from './schemas/offline';

@@ -34,3 +34,13 @@ export const prefsStore = {
   get: async (k: string) => get(`labpass.pref.${k}`),
   set: async (k: string, v: string | null) => set(`labpass.pref.${k}`, v),
 };
+
+/** Sign-out / revoke: drop the service worker's cached profile and loans so the next user of a shared browser sees nothing. */
+export async function clearCachedApi(): Promise<void> {
+  if (typeof caches === 'undefined') return;
+  for (const name of await caches.keys()) {
+    if (!name.startsWith('labpass-')) continue;
+    const cache = await caches.open(name);
+    for (const req of await cache.keys()) if (new URL(req.url).pathname.startsWith('/api/')) await cache.delete(req);
+  }
+}

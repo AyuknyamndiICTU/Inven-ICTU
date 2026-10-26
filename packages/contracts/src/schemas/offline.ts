@@ -37,11 +37,17 @@ export const OfflineBundle = z
         webauthnCredentialId: z.string().nullable(),
       }),
     ),
-    assistants: z.array(z.object({ id: Uuid, name: z.string(), pinHash: z.string() })),
+    /**
+     * Lab assistants who may confirm offline loans. `pinParams` is the argon2id encoded hash **without** its digest
+     * (`$argon2id$v=19$m=…,t=…,p=…$<salt>`); `wrappedKey` is the per-kiosk MAC key sealed with AES-256-GCM under
+     * SHA-256(argon2 digest). Only the right PIN unwraps it, and the MAC it yields is verified by the server at sync.
+     */
+    assistants: z.array(z.object({ id: Uuid, name: z.string(), pinParams: z.string(), wrappedKey: B64Url })),
     settings: z.object({
       blockWhenOverdue: z.boolean(),
       maxItemsPerStudent: z.int().nullable(),
       offlineMaxHours: z.int(),
+      cardAuthMode: z.enum(['UID', 'DESFIRE_PREFERRED', 'DESFIRE_REQUIRED']),
     }),
   })
   .meta({ id: 'OfflineBundle' });
@@ -69,7 +75,8 @@ export const OfflineTransaction = z.object({
     }),
     z.object({ type: z.literal('HCE'), credentialId: Uuid, nonce: B64Url, ts: z.int(), signature: B64Url }),
     z.object({ type: z.literal('SCAN'), payload: z.string() }),
-    z.object({ type: z.literal('ASSISTANT'), assistantId: Uuid }),
+    /** `mac` = HMAC-SHA256(assistant MAC key, canonical transaction) — see `offlineTxMacInput`. */
+    z.object({ type: z.literal('ASSISTANT'), assistantId: Uuid, mac: B64Url }),
   ]),
   borrowLines: z.array(z.object({ equipmentId: Uuid, quantity: z.int().min(1) })).default([]),
   returnLines: z
@@ -77,6 +84,25 @@ export const OfflineTransaction = z.object({
     .default([]),
 });
 export type OfflineTransaction = z.infer<typeof OfflineTransaction>;
+
+/**
+ * Canonical bytes an assistant MAC covers: who, what and when — so a MAC can never be reused for another student,
+ * other lines, or another transaction id.
+ */
+export function offlineTxMacInput(tx: {
+  txId: string;
+  studentId: string;
+  kind: 'BORROW' | 'RETURN';
+  occurredAt: string;
+  borrowLines?: Array<{ equipmentId: string; quantity: number }>;
+  returnLines?: Array<{ loanLineId: string; quantity: number; condition: string }>;
+}): string {
+  const lines =
+    tx.kind === 'BORROW'
+      ? (tx.borrowLines ?? []).map((l) => `${l.equipmentId}:${l.quantity}`).sort()
+      : (tx.returnLines ?? []).map((l) => `${l.loanLineId}:${l.quantity}:${l.condition}`).sort();
+  return ['LP-OFFLINE-ASSIST-1', tx.txId, tx.studentId, tx.kind, tx.occurredAt, ...lines].join('|');
+}
 
 export const OfflineSyncBody = z.object({
   offlineFrom: IsoDateTime,

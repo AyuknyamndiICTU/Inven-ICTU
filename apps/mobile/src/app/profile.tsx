@@ -6,7 +6,7 @@ import { Body, Button, Card, Field, Notice, Screen, Title } from '../components/
 import { errorMessage } from '../lib/api';
 import { useApp } from '../lib/app-context';
 import { enableWebPush, webPushSupported } from '../lib/push';
-import { prefsStore } from '../lib/storage';
+import { clearCachedApi, prefsStore } from '../lib/storage';
 
 /** Profile: language, matricule PIN, lost phone → revoke, sign out. */
 export default function Profile() {
@@ -31,6 +31,7 @@ export default function Profile() {
   const leave = async () => {
     credential.forget();
     await prefsStore.set('me', null);
+    await clearCachedApi();
     await session.clear();
     router.replace('/welcome');
   };

@@ -350,21 +350,21 @@ Owner: — · Started: — · Completed: — · Details: [S12](./04-steps-surfac
 
 ### M10 · Release candidate (S13)
 
-Owner: — · Started: — · Completed: — · Details: [S13](./04-steps-surfaces-release.md#s13--hardening-security--end-to-end-qa)
+Owner: AyuknyamndiICTU · Started: 2026-10-26 · Completed: — · Details: [S13](./04-steps-surfaces-release.md#s13--hardening-security--end-to-end-qa)
 
-- [ ] STRIDE threat model with one attack test per threat; fix every high/critical finding
-- [ ] Dependency, secret and Electron security scans
-- [ ] Cross-surface journey test (import → enroll → tap → borrow → alert → return damaged → reconcile)
-- [ ] k6 class-change load test (300 per minute for 15 minutes)
-- [ ] Chaos tests: kill Redis/API, unplug the reader, provider outage
-- [ ] Offline outage drill: server down during lab hours → kiosk lends offline → sync with 0 drift → replaying the sync is a no-op
-- [ ] Finish gates for the ui-kit, admin, kiosk and mobile; click-path audits
-- [ ] Backup/restore drill
+- [x] STRIDE threat model with one attack test per threat ([threat-model.md](../../docs/security/threat-model.md), `apps/api/test/attacks/`); 2 HIGH + 2 MEDIUM + 2 LOW findings in the new offline/student code **fixed** with regression tests ([s13-findings.md](../../docs/security/s13-findings.md))
+- [x] Dependency, secret and Electron security scans: runtime HIGHs fixed (Electron 38→42.11.18, fastify 5.12.7, nodemailer 10.2.1); dev-only advisories accepted with rationale; secretlint clean; Electron config reviewed (Electronegativity run on a connected machine before the signed release)
+- [x] Cross-surface journey test (import → enroll → tap → borrow → alert → return damaged → reconcile) — `apps/api/test/journeys/`
+- [/] k6 class-change load test: script `tests/load/class-change.js` ✅; in-process run 300 ops / 10 kiosks: 0 errors, 0 drift, p95 ≈ 0.5 s on the laptop ([evidence](../../docs/evidence/)); the 15-minute p95 < 300 ms gate runs on the lab server (S14)
+- [x] Chaos tests: crash between commit and cache, duplicate delivery, provider outage → DLQ (API suites); unplug the reader → K9 → recovery and API down (kiosk e2e)
+- [x] Offline outage drill: server down → kiosk lends offline (20 transactions) → sync with 0 drift → replaying the sync is a no-op (kiosk + API tests)
+- [/] Finish gates: kiosk K1–K10 at 1920×1080 / 1366×768 ✅, student web app 390×844 ✅, ui-kit `/kit` ✅; admin Playwright e2e (deferred from S09/S10) and `click-path-audit` → run with the deployed stack in S14
+- [x] Backup/restore drill: dump → restore into a clean database → equal row counts → reconcile 0 (`scripts/ops/restore-drill.ps1`, [evidence](../../docs/evidence/))
 
 **Acceptance**
 
-- [ ] No open critical/high findings; `verification-loop` is PASS
-- [ ] Load p95 < 300 ms; 0 drift after chaos and restore; evidence filed in `docs/evidence/`
+- [x] No open critical/high findings (runtime); `verification-loop`: tests, typecheck and lint pass for api, kiosk, mobile, admin, ui, contracts
+- [/] Load p95 < 300 ms ⏳ lab server; 0 drift after chaos and restore ✅; evidence filed in `docs/evidence/` ✅
 
 ---
 

@@ -1,5 +1,4 @@
 import { app, BrowserWindow, ipcMain, safeStorage, session, shell } from 'electron';
-import { argon2Verify } from 'hash-wasm';
 import { join } from 'node:path';
 import { io } from 'socket.io-client';
 import {
@@ -13,6 +12,7 @@ import { eventSender, registerIpc } from './ipc';
 import { KioskService, type SocketFactory } from './kiosk-service';
 import { RotatingLog } from './logger';
 import { OfflineEngine, type OfflineState } from './offline/engine';
+import { argon2Digest } from './offline/argon2';
 import { EncryptedStore } from './offline/store';
 import { createDevReader, type Scenario } from './reader/dev-reader';
 import type { ReaderDriver } from './reader/driver';
@@ -118,7 +118,7 @@ async function boot() {
     save: (s) => offlineStore.write(s),
     wipe: () => offlineStore.wipe(),
     kioskId: () => store.kioskId,
-    verifyPin: (pin, hash) => argon2Verify({ password: pin, hash }).catch(() => false),
+    argon2: (pin, params) => argon2Digest(pin, params),
   });
   service = new KioskService({
     store,

@@ -7,6 +7,7 @@ import { API_ENV, type ApiEnv } from '../config/env';
 import { LendingModule } from '../lending/lending.module';
 import { LendingService } from '../lending/lending.service';
 import { SecretBox, uidHmac } from '../platform/crypto/crypto';
+import { assistantMacKey, splitArgon2, txMac, wrapMacKey } from './assistant-key';
 import { Contract, ContractInput, type In } from '../platform/http/contract';
 import { AppError, Errors } from '../platform/http/problem';
 import type { LpRequest } from '../platform/http/request';
@@ -18,6 +19,13 @@ import { checkEvidence, type ConflictReason, conflictFromError, type EvidenceLoo
 /** Bundles are valid for twice the longest allowed outage so a kiosk that went offline just before a refresh is covered. */
 const BUNDLE_TTL_HOURS_MIN = 1;
 const KEEP_KEY_VERSIONS = 3;
+
+/** Conflict payloads are shown to lab assistants: never keep a raw card UID there (S13 finding 5, ADR-0009). */
+function redactEvidence(t: OfflineTransaction): OfflineTransaction {
+  if (t.evidence.type !== 'CARD' || !t.evidence.uid) return t;
+  const { uid, ...rest } = t.evidence;
+  return { ...t, evidence: { ...rest, uidSuffix: uid.slice(-4) } as OfflineTransaction['evidence'] };
+}
 
 function conflictDto(c: OfflineSyncConflict & { batch: { kioskId: string } }) {
   return {
@@ -110,7 +118,7 @@ export class OfflineService {
         },
       }),
       this.prisma.adminUser.findMany({
-        where: { active: true, assistantPinHash: { not: null } },
+        where: { active: true, assistantPinHash: { not: null }, role: { not: 'VIEWER' } },
         select: { id: true, name: true, assistantPinHash: true },
       }),
     ]);
@@ -160,26 +168,31 @@ export class OfflineService {
           publicKey: b64urlEncode(new Uint8Array((c.kind === 'DEVICE_KEY' ? c.publicKeySpki : c.cosePublicKey)!)),
           webauthnCredentialId: c.webauthnCredentialId,
         })),
-      assistants: assistants.map((a) => ({ id: a.id, name: a.name, pinHash: a.assistantPinHash! })),
+      // No PIN hashes leave the server: each assistant gets a MAC key that only their PIN unwraps (S13 findings 1, 4).
+      assistants: assistants.flatMap((a) => {
+        const split = splitArgon2(a.assistantPinHash!);
+        if (!split) return [];
+        const macKey = assistantMacKey(this.env.APP_SECRET, a.id, kioskId, keyVersion);
+        return [{ id: a.id, name: a.name, pinParams: split.pinParams, wrappedKey: wrapMacKey(split.digest, macKey) }];
+      }),
       settings: {
         blockWhenOverdue: settings.blockWhenOverdue,
         maxItemsPerStudent: settings.maxItemsPerStudent,
         offlineMaxHours: settings.offlineMaxHours,
+        cardAuthMode: settings.cardAuthMode,
       },
     };
   }
 
   // ───────────── Sync ─────────────
 
-  private lookups(): EvidenceLookups {
+  private lookups(kioskId: string, keyVersion: number): EvidenceLookups {
     return {
-      cardOwner: async (uid) =>
-        (
-          await this.prisma.cardBinding.findFirst({
-            where: { uidHmac: uidHmac(this.env.UID_PEPPER, uid), status: 'ACTIVE' },
-            select: { studentId: true },
-          })
-        )?.studentId ?? null,
+      card: async (uid) =>
+        this.prisma.cardBinding.findFirst({
+          where: { uidHmac: uidHmac(this.env.UID_PEPPER, uid), status: 'ACTIVE' },
+          select: { studentId: true, cardTech: true },
+        }),
       credential: async (id) => {
         const c = await this.prisma.mobileCredential.findUnique({
           where: { id },
@@ -187,8 +200,20 @@ export class OfflineService {
         });
         return c ? { ...c, spki: c.publicKeySpki ? new Uint8Array(c.publicKeySpki) : null } : null;
       },
-      assistantActive: async (id) =>
-        Boolean(await this.prisma.adminUser.count({ where: { id, active: true, assistantPinHash: { not: null } } })),
+      assistantKey: async (id) => {
+        const ok = await this.prisma.adminUser.count({
+          where: { id, active: true, assistantPinHash: { not: null }, role: { not: 'VIEWER' } },
+        });
+        return ok ? assistantMacKey(this.env.APP_SECRET, id, kioskId, keyVersion) : null;
+      },
+      useNonce: async (credentialId, nonce) => {
+        const r = await this.prisma.usedEvidenceNonce.createMany({
+          data: [{ credentialId, nonce }],
+          skipDuplicates: true,
+        });
+        return r.count === 1;
+      },
+      computeMac: txMac,
     };
   }
 
@@ -225,8 +250,18 @@ export class OfflineService {
         txCount: body.transactions.length,
       },
     });
-    const look = this.lookups();
-    const keyKnown = await this.prisma.kioskOfflineKey.count({ where: { kioskId, keyVersion: body.bundleVersion } });
+    const key = await this.prisma.kioskOfflineKey.findUnique({
+      where: { kioskId_keyVersion: { kioskId, keyVersion: body.bundleVersion } },
+    });
+    const settings = await this.settings.get();
+    // The kiosk cannot widen the window: it starts no earlier than the bundle it lent from and ends now (finding 2).
+    const bounded = {
+      ...ctx,
+      offlineFrom: Math.max(ctx.offlineFrom, key ? key.createdAt.getTime() : Date.now()),
+      offlineTo: Math.min(ctx.offlineTo, Date.now()),
+      cardAuthMode: settings.cardAuthMode,
+    };
+    const look = this.lookups(kioskId, body.bundleVersion);
     const applied: string[] = [];
     const duplicates: string[] = [];
     const conflicts: Array<{ txId: string; reason: string }> = [];
@@ -234,14 +269,18 @@ export class OfflineService {
     // Ordered replay: a return later in the outage may depend on an earlier borrow's stock.
     for (const t of [...body.transactions].sort((a, b) => a.seq - b.seq)) {
       const prior = await this.prisma.offlineSyncConflict.findUnique({ where: { offlineTxId: t.txId } });
-      if (prior) {
+      const done = await this.prisma.idempotencyKey.findUnique({
+        where: { scope_key: { scope: `kiosk.offline:${kioskId}`, key: t.txId } },
+        select: { status: true },
+      });
+      if (prior || done?.status === 'DONE') {
         duplicates.push(t.txId);
         continue;
       }
       let outcome: 'applied' | 'duplicate' | ConflictReason;
-      if (!keyKnown && body.bundleVersion > 0) outcome = 'BUNDLE_EXPIRED';
+      if (!key) outcome = 'BUNDLE_EXPIRED';
       else {
-        const ev = await checkEvidence(t, ctx, look);
+        const ev = await checkEvidence(t, bounded, look);
         outcome = ev.ok ? await this.apply(kioskId, t) : ev.reason;
       }
       if (outcome === 'applied') applied.push(t.txId);
@@ -252,7 +291,7 @@ export class OfflineService {
             batchId: batch.id,
             offlineTxId: t.txId,
             reason: outcome,
-            payload: { ...t, kioskId } as unknown as Prisma.InputJsonValue,
+            payload: { ...redactEvidence(t), kioskId } as unknown as Prisma.InputJsonValue,
           },
         });
         conflicts.push({ txId: t.txId, reason: outcome });

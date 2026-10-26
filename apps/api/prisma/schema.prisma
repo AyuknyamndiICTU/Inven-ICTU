@@ -654,6 +654,20 @@ model NotificationLog {
 
 // ───────────────────────────── Offline (S11.5) ─────────────────────────────
 
+/**
+ * Every phone nonce that has backed an identification (online HCE/scan or an offline sync), so a captured
+ * signature can never be replayed into a forged offline transaction (S13 finding 2).
+ */
+model UsedEvidenceNonce {
+  credentialId String   @db.Uuid
+  nonce        String
+  usedAt       DateTime @default(now())
+
+  @@id([credentialId, nonce])
+  @@index([usedAt])
+  @@map("used_evidence_nonces")
+}
+
 model KioskOfflineKey {
   id         String   @id @default(uuid()) @db.Uuid
   kioskId    String   @db.Uuid

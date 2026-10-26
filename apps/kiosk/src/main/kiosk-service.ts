@@ -187,8 +187,15 @@ export class KioskService {
     this.socket?.disconnect();
     const socket = this.d.socket(`${this.d.store.apiUrl}/kiosk`, token);
     this.socket = socket;
-    socket.on('connect', () => this.setOnline(true));
-    socket.on('disconnect', () => this.setOnline(false));
+    socket.on('connect', () => {
+      this.d.log.info('socket.connected');
+      this.setOnline(true);
+    });
+    socket.on('disconnect', (reason) => {
+      this.d.log.warn('socket.disconnected', String(reason));
+      this.setOnline(false);
+    });
+    socket.on('connect_error', (err) => this.d.log.warn('socket.error', (err as Error)?.message ?? 'error'));
     socket.on('identified', (payload) => this.onScanIdentified(payload as IdentifyResponse));
     socket.on('availability.changed', (p) => {
       const a = p as { equipmentId: string; available: number; health: 'OK' | 'LOW' | 'OUT' };

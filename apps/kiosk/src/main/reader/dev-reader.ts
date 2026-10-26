@@ -34,7 +34,8 @@ export function createDevReader(latencyMs = 30) {
   const reader = new FakeReader(latencyMs);
   const hold = (card: Parameters<FakeReader['place']>[0]) => {
     reader.place(card);
-    setTimeout(() => reader.remove(), 1200);
+    // Long enough for SELECT timeout + UID read on a slow machine; a real tap lasts about as long.
+    setTimeout(() => reader.remove(), 3000);
   };
   const simulate = (scenario: Scenario) => {
     switch (scenario) {

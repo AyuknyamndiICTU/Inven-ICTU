@@ -17,7 +17,7 @@ npmRebuild: false
 # Package the Electron binary already installed by pnpm (offline-friendly, same version as development).
 electronDist: ../../node_modules/electron/dist
 # Must match node_modules/electron (pnpm resolves the ^38 range); bump together with the dependency.
-electronVersion: 38.8.6
+electronVersion: 42.11.18
 extraMetadata:
   main: out/main/index.js
 win:

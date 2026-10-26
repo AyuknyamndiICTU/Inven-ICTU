@@ -1,5 +1,5 @@
 import { b64urlDecode } from '@labpass/contracts/tap-node';
-import { argon2id, argon2Verify } from 'hash-wasm';
+import { argon2id } from 'hash-wasm';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConfigStore, type SecretBox } from '../src/main/config';
 import { KioskService, type SocketLike } from '../src/main/kiosk-service';
+import { argon2Digest } from '../src/main/offline/argon2';
 import { OfflineEngine, type OfflineState } from '../src/main/offline/engine';
 import { EncryptedStore } from '../src/main/offline/store';
 import { FakeReader, hcePhone, uidCard } from '../src/main/reader/fake-reader';
@@ -69,7 +70,7 @@ async function setup() {
     save: (s) => offStore.write(s),
     wipe: () => offStore.wipe(),
     kioskId: () => store.kioskId,
-    verifyPin: (pin, hash) => argon2Verify({ password: pin, hash }),
+    argon2: (pin, params) => argon2Digest(pin, params),
   });
   const reader = new FakeReader();
   const events: KioskEvent[] = [];
@@ -252,7 +253,7 @@ describe('Offline mode round trip (S11.5 Verify)', () => {
       save: () => undefined,
       wipe: () => undefined,
       kioskId: () => MOCK.kioskId,
-      verifyPin: async () => true,
+      argon2: (pin, params) => argon2Digest(pin, params),
       now: () => now,
     });
     engine.wentOffline();
@@ -260,11 +261,41 @@ describe('Offline mode round trip (S11.5 Verify)', () => {
     expect(engine.readOnly()).toBe(true);
     const lookup = engine.identifyManual(MOCK.manualMatricule);
     if (lookup.status !== 'VERIFICATION_REQUIRED') throw new Error('expected lookup');
-    const who = await engine.verifyAssistant(lookup.lookupId, '0000');
+    const who = await engine.verifyAssistant(lookup.lookupId, MOCK.assistantPin);
     expect(who.eligibility.canBorrow).toBe(false);
     expect(() => engine.signIn([{ equipmentId: k.backend.equipment[0]!.id, quantity: 1 }])).toThrow(/paused/);
     engine.extend(2);
     expect(engine.readOnly()).toBe(false);
+
+    // Five wrong assistant PINs lock offline confirmation (persisted, so a restart does not reset it).
+    for (let i = 0; i < 5; i++) {
+      const l = engine.identifyManual(MOCK.manualMatricule);
+      if (l.status === 'VERIFICATION_REQUIRED')
+        await expect(engine.verifyAssistant(l.lookupId, '000000')).rejects.toMatchObject({
+          info: { code: 'VERIFICATION_FAILED' },
+        });
+    }
+    const locked = engine.identifyManual(MOCK.manualMatricule);
+    if (locked.status === 'VERIFICATION_REQUIRED')
+      await expect(engine.verifyAssistant(locked.lookupId, MOCK.assistantPin)).rejects.toMatchObject({
+        info: { code: 'VERIFICATION_LOCKED' },
+      });
+
+    // DESFIRE_REQUIRED: a copied UID cannot be used while the kiosk is offline.
+    const strict = new OfflineEngine({
+      load: () => {
+        const s = k.offStore.read()!;
+        return {
+          ...s,
+          bundle: { ...s.bundle!, settings: { ...s.bundle!.settings, cardAuthMode: 'DESFIRE_REQUIRED' } },
+        };
+      },
+      save: () => undefined,
+      wipe: () => undefined,
+      kioskId: () => MOCK.kioskId,
+      argon2: (pin, params) => argon2Digest(pin, params),
+    });
+    expect(() => strict.identifyCard(MOCK.cardUid)).toThrow(/secure check/);
     await k.service.stop();
   });
 
