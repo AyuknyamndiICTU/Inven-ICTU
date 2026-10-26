@@ -40,6 +40,20 @@ export {
   type SkylineBar,
 } from './signatures/signatures';
 export { ReaderEye, RingLanding, type ReaderEyeState } from './signatures/reader-eye';
+export { SceneProvider, useScene, useTheatreLevel, type EyeState, type GlowTone, type GlStatus } from './theatre/scene';
+export {
+  classifyRenderer,
+  clampDpr,
+  detectGpuTier,
+  FrameGovernor,
+  MAX_DPR,
+  webglAllowed,
+  type GpuTier,
+} from './theatre/capability';
+export { IdentityRise } from './theatre/identity-rise';
+export { FannedCart, type CartCard } from './theatre/fanned-cart';
+export { buildParticles, MAX_PARTICLES, ParticleConverge, SuccessLanding } from './theatre/particles';
+export { LiveChallengeQR } from './theatre/challenge-qr';
 export {
   AccessPointIcon,
   ConsoleCableIcon,

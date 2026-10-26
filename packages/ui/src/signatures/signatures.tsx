@@ -1,7 +1,8 @@
 import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll } from 'motion/react';
 import { motionTokens, springs, tween } from '@labpass/motion/react';
-import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { cn } from '../cn';
+import { useSceneHorizon } from '../theatre/scene';
 
 // ───────────── A7 Capsule Nav ─────────────
 
@@ -203,9 +204,11 @@ export function DepthType({ text, className }: { text: string; className?: strin
   );
 }
 
-/** Film grain + a radial Signal glow rising from the bottom edge, drifting slowly (decorative). */
+/** Film grain + a radial Signal glow rising from the bottom edge, drifting slowly (decorative). Upgraded to the shader glow inside a WebGL scene. */
 export function HorizonGlow({ className, tone = 'signal' }: { className?: string; tone?: 'signal' | 'amber' | 'red' }) {
-  return <div className={cn('lp-horizon-glow', `lp-horizon-glow--${tone}`, className)} aria-hidden />;
+  const ref = useRef<HTMLDivElement>(null);
+  useSceneHorizon(ref, tone);
+  return <div ref={ref} className={cn('lp-horizon-glow', `lp-horizon-glow--${tone}`, className)} aria-hidden />;
 }
 
 // ───────────── A11 Live Ticker ─────────────

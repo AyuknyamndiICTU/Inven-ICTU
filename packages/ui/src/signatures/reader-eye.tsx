@@ -1,18 +1,21 @@
 import { motion, useReducedMotion } from 'motion/react';
+import { useRef } from 'react';
 import { motionTokens, springs, tween } from '@labpass/motion/react';
 import { cn } from '../cn';
 import { PatchCableIcon, RouterIcon, SwitchIcon } from '../icons/equipment';
+import { useSceneEye, useTheatreLevel } from '../theatre/scene';
 
 export type ReaderEyeState = 'idle' | 'reading' | 'success' | 'error' | 'offline';
 
 /**
- * A1 Reader Eye — CSS-level version (the WebGL orb in S08b upgrades it and falls back to this).
+ * A1 Reader Eye. Inside a `SceneProvider` with WebGL on, the shared canvas draws the shader orb at this element's
+ * position and the CSS orb hides; otherwise (and on any GL failure) this CSS version is what you see.
  * idle: the slit breathes; reading (A2): the slit sweeps to a full horizon; error (E1): red slit + 3 × 6 px shake;
  * offline: amber slit. Decorative: the kiosk announces states through StatusCapsule / aria-live.
  */
 export function ReaderEye({
   state = 'idle',
-  level = 'full',
+  level: explicitLevel,
   size = 320,
   className,
 }: {
@@ -21,11 +24,15 @@ export function ReaderEye({
   size?: number;
   className?: string;
 }) {
+  const level = useTheatreLevel(explicitLevel);
   const prefersReduced = useReducedMotion();
   const still = prefersReduced || level !== 'full';
+  const ref = useRef<HTMLDivElement>(null);
+  useSceneEye(ref, state);
   const shake = state === 'error' && !still ? { x: [0, -6, 6, -6, 6, -6, 0] } : { x: 0 };
   return (
     <div
+      ref={ref}
       className={cn('lp-eye', `lp-eye--${state}`, still && 'is-still', className)}
       style={{ width: size, height: size }}
       aria-hidden
