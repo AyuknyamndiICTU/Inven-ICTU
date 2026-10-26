@@ -6,7 +6,15 @@ import { resolve } from 'node:path';
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
-    build: { rollupOptions: { input: { index: resolve(__dirname, 'src/main/index.ts') } } },
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          // PC/SC runs in its own utilityProcess (ADR-0002).
+          'reader-host': resolve(__dirname, 'src/main/reader/reader-host.ts'),
+        },
+      },
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],

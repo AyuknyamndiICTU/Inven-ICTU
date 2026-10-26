@@ -1,3 +1,1 @@
-export interface KioskBridge {
-  appInfo(): { name: string; version: string };
-}
+export type { KioskBridge } from '../shared/ipc';
