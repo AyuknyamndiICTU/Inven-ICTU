@@ -197,7 +197,23 @@
       "noActivity": "No activity yet today.",
       "allGood": "Every item is above its alert level.",
       "noOverdue": "No overdue loans.",
-      "viewAll": "View all"
+      "viewAll": "View all",
+      "greetingMorning": "Good morning, {name}",
+      "greetingAfternoon": "Good afternoon, {name}",
+      "greetingEvening": "Good evening, {name}",
+      "overview": "Here is what is happening in the Cisco Lab today.",
+      "loansTrend": "Loans — last 14 days",
+      "busiestHours": "Busiest hours",
+      "topItems": "Most borrowed",
+      "stockHealth": "Stock health",
+      "itemsTracked": "items tracked",
+      "healthy": "Healthy",
+      "vsPrevious": "vs previous 7 days",
+      "noLoansYet": "No loans in this period yet.",
+      "studentsPeriod": "{count} in the last 14 days",
+      "loansCount": "{count} loans",
+      "quickActions": "Quick actions",
+      "kioskFleet": "Kiosk fleet"
     },
     "inventory": {
       "title": "Inventory",
@@ -482,7 +498,13 @@
       "profile": "My profile",
       "live": "Live",
       "reconnecting": "Reconnecting…",
-      "skip": "Skip to content"
+      "skip": "Skip to content",
+      "groupOverview": "Overview",
+      "groupOperations": "Operations",
+      "groupAdmin": "Administration",
+      "menu": "Menu",
+      "notifications": "Notifications",
+      "pendingRequests": "{count} requests waiting"
     },
     "nav": {
       "dashboard": "Dashboard",

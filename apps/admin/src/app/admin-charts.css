@@ -1,0 +1,259 @@
+/* Admin charts and dashboard lists. */
+.lp-chart {
+  position: relative;
+}
+.lp-chart__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  border-radius: 12px;
+}
+.lp-chart__svg:focus-visible {
+  outline: 2px solid var(--lp-focus);
+  outline-offset: 4px;
+}
+.lp-chart__grid {
+  stroke: var(--glass-line);
+  stroke-dasharray: 4 6;
+}
+.lp-chart__line {
+  filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--lp-chart-a) 45%, transparent));
+}
+.lp-chart__axis {
+  fill: var(--lp-text-muted);
+  font: 500 11px var(--lp-font-sans);
+}
+.lp-chart__guide {
+  stroke: color-mix(in srgb, var(--lp-chart-a) 55%, transparent);
+  stroke-dasharray: 3 4;
+}
+.lp-chart__dot {
+  fill: var(--lp-chart-a);
+  stroke: var(--glass-strong);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px var(--lp-chart-a));
+}
+.lp-chart__tip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 14px));
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-line);
+  background: var(--glass-strong);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--glass-shadow);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Bars */
+.lp-bars {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.lp-bars__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.lp-bars__track {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+}
+.lp-bars__bar {
+  width: 100%;
+  border-radius: 8px 8px 4px 4px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--lp-chart-a) 75%, transparent),
+    color-mix(in srgb, var(--lp-chart-a) 25%, transparent)
+  );
+}
+.lp-bars__bar.is-top {
+  background: linear-gradient(180deg, #f59e0b, color-mix(in srgb, #f97316 40%, transparent));
+  box-shadow: 0 0 18px -2px rgba(245, 158, 11, 0.6);
+}
+.lp-bars__label {
+  font-size: 10.5px;
+  text-align: center;
+  color: var(--lp-text-muted);
+}
+
+/* Donut */
+.lp-donut {
+  position: relative;
+  flex: none;
+}
+.lp-donut svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.lp-donut__track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--lp-text) 7%, transparent);
+  stroke-width: 10;
+}
+.lp-donut__center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.lp-donut__value {
+  font: 700 30px/1 var(--lp-font-display);
+  letter-spacing: -0.04em;
+}
+.lp-donut__caption {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--lp-text-muted);
+}
+.lp-legend {
+  display: grid;
+  gap: 10px;
+  min-width: 160px;
+  font-size: 13.5px;
+}
+.lp-legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lp-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.lp-legend__dot.is-ok {
+  background: var(--lp-ok);
+  box-shadow: 0 0 10px var(--lp-ok);
+}
+.lp-legend__dot.is-low {
+  background: var(--lp-low);
+  box-shadow: 0 0 10px var(--lp-low);
+}
+.lp-legend__dot.is-out {
+  background: var(--lp-out);
+  box-shadow: 0 0 10px var(--lp-out);
+}
+
+/* Meter */
+.lp-meter {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--lp-text) 7%, transparent);
+}
+.lp-meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--tone-2), var(--tone));
+  box-shadow: 0 0 12px -2px var(--tone);
+}
+
+/* Ranked list */
+.lp-rank {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lp-rank__pos {
+  width: 18px;
+  font: 700 12px var(--lp-font-mono);
+  color: var(--lp-text-muted);
+}
+.lp-rank__icon,
+.lp-timeline__dot {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: var(--lp-chart-a);
+  background: color-mix(in srgb, var(--lp-chart-a) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lp-chart-a) 22%, transparent);
+}
+
+/* Activity timeline */
+.lp-timeline {
+  position: relative;
+  display: grid;
+  gap: 4px;
+}
+.lp-timeline::before {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--lp-chart-a), transparent);
+  opacity: 0.35;
+}
+.lp-timeline__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px 6px 0;
+  border-radius: 12px;
+}
+.lp-timeline__item:hover {
+  background: color-mix(in srgb, var(--lp-text) 4%, transparent);
+}
+.lp-timeline__dot {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 14%, var(--glass-strong));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 35%, transparent);
+}
+
+.lp-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-line);
+  background: var(--glass-strong);
+}
+.lp-allgood {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 18px 8px;
+  border-radius: 16px;
+  color: var(--lp-ok-text);
+  text-align: center;
+  font-size: 14px;
+  background: color-mix(in srgb, var(--lp-ok) 8%, transparent);
+}
+
+/* Shared stock skyline, recoloured for the console. */
+.lp-admin .lp-skyline__ghost {
+  fill: color-mix(in srgb, var(--lp-text) 6%, transparent);
+}
+.lp-admin .lp-skyline__fill {
+  fill: color-mix(in srgb, var(--lp-chart-a) 70%, var(--lp-chart-b));
+  opacity: 0.85;
+  transition:
+    opacity var(--lp-dur-fast) var(--lp-ease-smooth),
+    filter var(--lp-dur-fast) var(--lp-ease-smooth);
+}
+.lp-admin .lp-skyline__bar.is-clickable:hover .lp-skyline__fill {
+  opacity: 1;
+  filter: drop-shadow(0 0 8px var(--lp-chart-a));
+}

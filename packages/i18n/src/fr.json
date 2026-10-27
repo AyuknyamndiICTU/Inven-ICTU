@@ -197,7 +197,23 @@
       "noActivity": "Aucune activité pour l’instant.",
       "allGood": "Tous les articles sont au-dessus de leur seuil.",
       "noOverdue": "Aucun prêt en retard.",
-      "viewAll": "Tout voir"
+      "viewAll": "Tout voir",
+      "greetingMorning": "Bonjour, {name}",
+      "greetingAfternoon": "Bon après-midi, {name}",
+      "greetingEvening": "Bonsoir, {name}",
+      "overview": "Voici ce qui se passe au laboratoire Cisco aujourd’hui.",
+      "loansTrend": "Prêts — 14 derniers jours",
+      "busiestHours": "Heures de pointe",
+      "topItems": "Les plus empruntés",
+      "stockHealth": "État du stock",
+      "itemsTracked": "articles suivis",
+      "healthy": "En stock",
+      "vsPrevious": "par rapport aux 7 jours précédents",
+      "noLoansYet": "Aucun prêt sur cette période pour l’instant.",
+      "studentsPeriod": "{count} sur les 14 derniers jours",
+      "loansCount": "{count} prêts",
+      "quickActions": "Actions rapides",
+      "kioskFleet": "Parc de bornes"
     },
     "inventory": {
       "title": "Inventaire",
@@ -482,7 +498,13 @@
       "profile": "Mon profil",
       "live": "En direct",
       "reconnecting": "Reconnexion…",
-      "skip": "Aller au contenu"
+      "skip": "Aller au contenu",
+      "groupOverview": "Vue d’ensemble",
+      "groupOperations": "Opérations",
+      "groupAdmin": "Administration",
+      "menu": "Menu",
+      "notifications": "Notifications",
+      "pendingRequests": "{count} demandes en attente"
     },
     "nav": {
       "dashboard": "Tableau de bord",

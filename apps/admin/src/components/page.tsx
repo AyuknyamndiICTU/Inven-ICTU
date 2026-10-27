@@ -1,47 +1,84 @@
 'use client';
 
 import type { AdminRole } from '@labpass/contracts/client';
+import { motionTokens, tween, useSafeMotion } from '@labpass/motion/react';
 import { EmptyState, ErrorState, IconButton, LockedState, Skeleton } from '@labpass/ui';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { motion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { useT } from '@/lib/i18n';
 import { useSession } from '@/lib/session';
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+  eyebrow,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  eyebrow?: ReactNode;
+}) {
+  const safe = useSafeMotion(motionTokens.distance.sm);
+  const t = useT();
   return (
-    <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="text-3xl font-bold tracking-heading">{title}</h1>
-        {subtitle && <p className="mt-1 text-text-muted">{subtitle}</p>}
+    <motion.header
+      className="lp-page-head"
+      initial={safe.initial}
+      animate={safe.animate}
+      transition={tween('slow', 'emphasized')}
+    >
+      <div className="min-w-0">
+        <p className="lp-page-head__eyebrow">{eyebrow ?? `${t('app.university')} · ${t('app.lab')}`}</p>
+        <h1 className="lp-page-head__title">{title}</h1>
+        {subtitle && <p className="lp-page-head__sub">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-    </header>
+    </motion.header>
   );
 }
 
-/** A bento cell. Each one loads and fails on its own (DESIGN §6 "partial"). */
+/** A glass bento cell that rises in when it scrolls into view. Each one loads and fails on its own (DESIGN §6). */
 export function Panel({
   title,
   actions,
   children,
   className = '',
+  icon,
+  index = 0,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  icon?: ReactNode;
+  /** Position in a group, for a staggered entrance. */
+  index?: number;
 }) {
+  const safe = useSafeMotion(motionTokens.distance.md);
   return (
-    <section className={`rounded-tile border border-line bg-surface-raised p-5 ${className}`}>
+    <motion.section
+      className={`lp-glass p-5 ${className}`}
+      initial={safe.initial}
+      whileInView={safe.animate}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ ...tween('slow', 'emphasized'), delay: index * motionTokens.stagger }}
+    >
       {(title || actions) && (
         <div className="mb-4 flex items-center justify-between gap-3">
-          {title && <h2 className="text-md font-semibold tracking-heading">{title}</h2>}
+          {title && (
+            <h2 className="lp-panel-title">
+              {icon && <span className="lp-panel-title__icon">{icon}</span>}
+              {title}
+            </h2>
+          )}
           {actions}
         </div>
       )}
       {children}
-    </section>
+    </motion.section>
   );
 }
 

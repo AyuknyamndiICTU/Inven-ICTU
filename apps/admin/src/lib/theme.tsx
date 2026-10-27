@@ -6,11 +6,11 @@ type Theme = 'light' | 'dark';
 const Ctx = createContext<{ theme: Theme; toggle: () => void }>({ theme: 'light', toggle: () => undefined });
 const STORAGE = 'lp.theme';
 
-/** Light by default (DESIGN §1); dark is opt-in and remembered. */
+/** Dark by default (the console's glass design); light is opt-in and remembered. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>('dark');
   useEffect(() => {
-    if (localStorage.getItem(STORAGE) === 'dark') setTheme('dark');
+    if (localStorage.getItem(STORAGE) === 'light') setTheme('light');
   }, []);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
