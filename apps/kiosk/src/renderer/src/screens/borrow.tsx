@@ -87,7 +87,7 @@ export function BorrowStage({
                   id: l.equipmentId,
                   name: l.name,
                   qty: l.qty,
-                  icon: <EquipmentIcon name={`${l.categoryName} ${l.name}`} />,
+                  icon: <EquipmentIcon name={l.name} category={l.categoryName} />,
                 }))}
                 label={t('kiosk.cart')}
                 removeLabel={(n) => t('kiosk.removeItem', { name: n })}

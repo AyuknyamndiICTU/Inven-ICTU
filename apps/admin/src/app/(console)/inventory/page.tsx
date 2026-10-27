@@ -140,7 +140,7 @@ export default function InventoryPage() {
                           {e.imageUrl ? (
                             <img src={e.imageUrl} alt="" className="h-9 w-12 object-contain" />
                           ) : (
-                            <EquipmentIcon name={e.name} width={40} height={28} />
+                            <EquipmentIcon name={e.name} category={e.categoryName} width={40} height={28} />
                           )}
                         </span>
                         <span className="grid">
