@@ -68,7 +68,11 @@ export function EquipmentCombobox({
                 className={cn('lp-combo__item', selected.has(it.id) && 'is-selected')}
               >
                 <span className="lp-combo__thumb" aria-hidden>
-                  {it.imageUrl ? <img src={it.imageUrl} alt="" loading="lazy" /> : <EquipmentIcon name={it.name} />}
+                  {it.imageUrl ? (
+                    <img src={it.imageUrl} alt="" loading="lazy" />
+                  ) : (
+                    <EquipmentIcon name={it.name} category={it.categoryName} />
+                  )}
                 </span>
                 <span className="lp-combo__text">
                   <span className="lp-combo__name">{it.name}</span>

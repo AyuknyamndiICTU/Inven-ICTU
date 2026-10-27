@@ -1,4 +1,4 @@
-/* Idempotent seed: categories, ~30 Cisco lab items (with ledger entries), 200 SYNTHETIC students, one SUPER_ADMIN.
+/* Idempotent seed: categories, ~55 Cisco lab items (with ledger entries), 200 SYNTHETIC students, one SUPER_ADMIN.
  * With NODE_ENV=production only the categories and the SUPER_ADMIN are created (LABPASS_SEED_DEMO=1 overrides).
  * Running it twice changes nothing. Never seed real student data here. */
 import { hash } from '@node-rs/argon2';
@@ -20,6 +20,8 @@ const categories: Array<[name: string, icon: string]> = [
   ['Modules & Cards', 'cpu'],
   ['Tools', 'wrench'],
   ['Console & Power', 'plug'],
+  ['Audio & Video', 'projector'],
+  ['Display Cables & Adapters', 'hdmi'],
 ];
 
 // code, name, category, quantity, low-stock threshold (null = global default)
@@ -54,6 +56,32 @@ const equipment: Array<[string, string, string, number, number | null]> = [
   ['PWR-STRIP-6', 'Power Strip (6 outlets)', 'Console & Power', 12, 3],
   ['PWR-UPS-1K', 'UPS 1 kVA', 'Console & Power', 3, 1],
   ['TL-LAPTOP-LAB', 'Lab Laptop (Packet Tracer)', 'Tools', 6, 2],
+  // Extra routers and switches used in CCNA practicals
+  ['RTR-C2901', 'Cisco 2901 Router', 'Routers', 6, 2],
+  ['SW-C2960-48TT', 'Catalyst 2960 48-port Switch', 'Switches', 4, 1],
+  // Presentation and audio equipment
+  ['AV-PROJ-HD', 'HD Projector (HDMI/VGA)', 'Audio & Video', 4, 1],
+  ['AV-MIC-WL', 'Wireless Microphone (handheld)', 'Audio & Video', 4, 1],
+  ['AV-MIC-WIRED', 'Wired Microphone with Stand', 'Audio & Video', 3, 1],
+  ['AV-SPK-BT', 'Bluetooth Speaker', 'Audio & Video', 4, 1],
+  ['AV-PRESENTER', 'Wireless Presenter (slide clicker)', 'Audio & Video', 5, 1],
+  // Display cables, adapters and distributors
+  ['AV-HDMI-WL2', 'Dual Wireless HDMI Transmitter/Receiver Kit', 'Display Cables & Adapters', 3, 1],
+  ['CBL-HDMI-3M', 'HDMI Cable 3 m', 'Display Cables & Adapters', 15, 4],
+  ['CBL-HDMI-10M', 'HDMI Cable 10 m', 'Display Cables & Adapters', 6, 2],
+  ['CBL-DVI', 'DVI-D Cable 1.8 m', 'Display Cables & Adapters', 8, 2],
+  ['ADP-VGA-HDMI', 'VGA to HDMI Adapter', 'Display Cables & Adapters', 8, 2],
+  ['ADP-HDMI-VGA', 'HDMI to VGA Adapter', 'Display Cables & Adapters', 8, 2],
+  ['ADP-USBC-HDMI', 'USB-C to HDMI Adapter', 'Display Cables & Adapters', 6, 2],
+  ['AV-HDMI-DIST4', 'HDMI Distributor / Splitter 1×4', 'Display Cables & Adapters', 3, 1],
+  // Network and power cabling
+  ['CBL-ETH-10M', 'Ethernet Cable Cat6 10 m', 'Cables & Transceivers', 20, 5],
+  ['CBL-ETH-15M', 'Ethernet Cable Cat6 15 m', 'Cables & Transceivers', 10, 3],
+  ['PWR-CABLE-C13', 'Power Supply Cable (IEC C13)', 'Console & Power', 30, 8],
+  ['PWR-CABLE-C7', 'Power Supply Cable (Figure-8, C7)', 'Console & Power', 10, 3],
+  ['PWR-EXT-5M', 'Extension Cable 5 m', 'Console & Power', 10, 3],
+  ['PWR-EXT-10M', 'Extension Cable Reel 10 m', 'Console & Power', 4, 1],
+  ['PWR-DIST-8', 'Power Distributor (8-way PDU)', 'Console & Power', 4, 1],
 ];
 
 const firstNames = [

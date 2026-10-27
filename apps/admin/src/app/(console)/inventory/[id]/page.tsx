@@ -63,7 +63,7 @@ export default function EquipmentDetailPage({ params }: { params: Promise<{ id: 
                   {e.imageUrl ? (
                     <img src={e.imageUrl} alt={e.name} className="max-h-full max-w-full object-contain" />
                   ) : (
-                    <EquipmentIcon name={e.name} width={140} height={94} />
+                    <EquipmentIcon name={e.name} category={e.categoryName} width={140} height={94} />
                   )}
                 </div>
                 {e.description && <p className="mt-4 text-sm text-text-muted">{e.description}</p>}
