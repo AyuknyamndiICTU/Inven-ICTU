@@ -16,6 +16,7 @@ import { errorCode, errorMessage } from '../lib/api';
 import { useApp } from '../lib/app-context';
 import { type KioskChallenge, readKioskQr } from '../lib/kiosk-qr';
 import { prefsStore } from '../lib/storage';
+import { CrestOrbit } from '../components/crest-orbit';
 
 type MeData = Awaited<ReturnType<ReturnType<typeof useApp>['api']['me']>> & {
   student: { firstName: string; lastName: string; matricule: string; program: string | null };
@@ -178,6 +179,7 @@ export default function Pass() {
       <Screen>
         {!me.data && cached && <Capsule tone="low">{t('mobile.offline')}</Capsule>}
         <UpdateBanner />
+        <CrestOrbit size={110} students={6} />
         <PassCard me={data} pulse={pulse} />
 
         <View accessibilityRole="tablist" style={[s.modes, { borderColor: theme.line }]}>

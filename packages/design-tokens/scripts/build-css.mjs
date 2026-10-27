@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
 const { tokens } = await import(pathToFileURL(join(dist, 'index.js')).href);
-const { palette, themes, font, fontSize, tracking, radius, shadow } = tokens;
+const { palette, themes, font, fontSize, tracking, radius, shadow, gradient } = tokens;
 
 const kebab = (s) => s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 const themeVars = (t) =>
@@ -27,6 +27,9 @@ ${themeVars(themes.light)}
   --lp-font-mono: ${font.mono};
   --lp-shadow-float: ${shadow.float};
   --lp-shadow-glow: ${shadow.glow};
+  --lp-grad-brand: linear-gradient(120deg, ${gradient.brand.join(', ')});
+  --lp-grad-warm: linear-gradient(120deg, ${gradient.warm.join(', ')});
+  --lp-grad-deep: linear-gradient(160deg, ${gradient.deep.join(', ')});
   color-scheme: light;
 }
 :root[data-theme='dark'],

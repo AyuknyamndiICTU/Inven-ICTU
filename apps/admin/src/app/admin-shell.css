@@ -4,30 +4,30 @@
   --glass-strong: rgba(255, 255, 255, 0.9);
   --glass-line: rgba(15, 23, 42, 0.08);
   --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 18px 40px -24px rgba(15, 23, 42, 0.35);
-  --aurora-1: rgba(0, 163, 224, 0.22);
-  --aurora-2: rgba(139, 92, 246, 0.18);
-  --aurora-3: rgba(16, 185, 129, 0.14);
-  --lp-chart-a: #0891b2;
-  --lp-chart-b: #7c3aed;
+  --aurora-1: rgba(232, 125, 1, 0.2);
+  --aurora-2: rgba(43, 35, 144, 0.2);
+  --aurora-3: rgba(235, 195, 126, 0.22);
+  --lp-chart-a: #c25e00;
+  --lp-chart-b: #2b2390;
   --side-w: 260px;
   position: relative;
   display: flex;
   min-height: 100dvh;
-  background: linear-gradient(160deg, #f4f7fb 0%, #eef2f8 45%, #f7f5fb 100%);
+  background: linear-gradient(160deg, #fbf8f2 0%, #f3f1fa 50%, #fdf6ec 100%);
 }
 :root[data-theme='dark'] .lp-admin {
-  --glass: rgba(17, 24, 39, 0.55);
-  --glass-strong: rgba(17, 24, 39, 0.82);
-  --glass-line: rgba(148, 197, 255, 0.12);
+  --glass: rgba(20, 16, 71, 0.5);
+  --glass-strong: rgba(20, 16, 71, 0.82);
+  --glass-line: rgba(235, 195, 126, 0.14);
   --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 24px 60px -30px rgba(0, 0, 0, 0.8);
-  --aurora-1: rgba(0, 163, 224, 0.28);
-  --aurora-2: rgba(124, 58, 237, 0.24);
-  --aurora-3: rgba(16, 185, 129, 0.16);
-  --lp-chart-a: #22d3ee;
-  --lp-chart-b: #a78bfa;
+  --aurora-1: rgba(232, 125, 1, 0.26);
+  --aurora-2: rgba(75, 63, 196, 0.32);
+  --aurora-3: rgba(235, 195, 126, 0.16);
+  --lp-chart-a: #f7a23b;
+  --lp-chart-b: #8a7dff;
   background:
-    radial-gradient(1200px 700px at 70% -10%, #0b1b33 0%, transparent 60%),
-    linear-gradient(180deg, #050a14 0%, #060b16 60%, #04070d 100%);
+    radial-gradient(1200px 700px at 70% -10%, #1a1466 0%, transparent 60%),
+    linear-gradient(180deg, #06032a 0%, #050320 60%, #03021a 100%);
 }
 
 /* Slowly drifting colour fields behind the glass. */
@@ -368,4 +368,40 @@
   .lp-fleet__dot.is-on {
     animation: none;
   }
+}
+
+/* ICTU crest in the sidebar and drawer. */
+.lp-crest-mark {
+  flex: none;
+  width: 38px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(232, 125, 1, 0.35));
+  transition: transform var(--lp-dur-slow) var(--lp-ease-smooth);
+}
+.lp-side__brand:hover .lp-crest-mark {
+  transform: rotateY(180deg);
+}
+.lp-side__name {
+  background: linear-gradient(100deg, var(--lp-text) 20%, #f7a23b 70%, #ebc37e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Sign-in page: navy backdrop with the spinning crest. */
+.lp-login {
+  background:
+    radial-gradient(900px 600px at 25% 45%, rgba(43, 35, 144, 0.55), transparent 65%),
+    radial-gradient(700px 500px at 80% 80%, rgba(232, 125, 1, 0.22), transparent 60%),
+    linear-gradient(180deg, #06032a, #03021a);
+}
+.lp-login__tag {
+  font: 600 13px var(--lp-font-sans);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #e87d01, #ebc37e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

@@ -1,11 +1,11 @@
 /* Admin surfaces: glass panels, page header, gradient stat cards and colour tones. */
 .lp-tone-cyan {
-  --tone: #06b6d4;
-  --tone-2: #3b82f6;
+  --tone: #f7a23b;
+  --tone-2: #e87d01;
 }
 .lp-tone-violet {
-  --tone: #8b5cf6;
-  --tone-2: #6366f1;
+  --tone: #7b6dff;
+  --tone-2: #2b2390;
 }
 .lp-tone-amber {
   --tone: #f59e0b;
@@ -226,12 +226,7 @@
   box-shadow: 0 8px 20px -10px var(--lp-chart-a);
 }
 .lp-admin .lp-btn--primary {
-  color: #fff;
-  background: linear-gradient(120deg, #0891b2, #6d28d9);
-  box-shadow: 0 10px 24px -12px #6d28d9;
-}
-:root[data-theme='dark'] .lp-admin .lp-btn--primary {
-  background: linear-gradient(120deg, #06b6d4, #8b5cf6);
+  box-shadow: 0 10px 24px -12px #e87d01;
 }
 .lp-admin .lp-btn--secondary,
 .lp-admin .lp-select,

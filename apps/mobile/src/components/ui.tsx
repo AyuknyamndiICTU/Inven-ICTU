@@ -62,13 +62,13 @@ export function Button({
   const { theme } = useApp();
   const bg =
     variant === 'primary'
-      ? theme.text
+      ? palette.ictu.orange
       : variant === 'danger'
         ? palette.out[500]
         : variant === 'secondary'
           ? theme.surfaceRaised
           : 'transparent';
-  const fg = variant === 'primary' ? theme.bg : variant === 'danger' ? '#fff' : theme.text;
+  const fg = variant === 'primary' ? palette.ictu.navy : variant === 'danger' ? '#fff' : theme.text;
   const off = disabled || loading;
   return (
     <Pressable

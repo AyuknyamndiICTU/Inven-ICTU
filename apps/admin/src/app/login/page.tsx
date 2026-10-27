@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, DepthType, HorizonGlow, Input, QrCode, StatusCapsule } from '@labpass/ui';
+import { Button, CrestOrbit, DepthType, HorizonGlow, Input, QrCode, StatusCapsule } from '@labpass/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -72,10 +72,11 @@ function LoginCard() {
       transition={springs.lift}
     >
       <div className="mb-6 flex items-center justify-between">
-        <span className="flex items-center gap-2 font-bold tracking-heading">
-          <span className="lp-brand-mark" aria-hidden />
-          LabPass
-        </span>
+        <img
+          src="/brand/ictu-wordmark.png"
+          alt="The ICT University"
+          className="h-12 w-auto rounded-xl bg-[#F4EFE3] px-2.5 py-1.5 shadow-float"
+        />
         <button
           type="button"
           className="lp-btn lp-btn--ghost lp-btn--sm font-mono"
@@ -171,15 +172,21 @@ function LoginCard() {
 
 export default function LoginPage() {
   return (
-    <main className="theme-dark relative grid min-h-dvh place-items-center overflow-hidden bg-ink-950 text-text">
+    <main className="lp-login theme-dark relative grid min-h-dvh items-center overflow-hidden text-text lg:grid-cols-[1.15fr_1fr]">
       <HorizonGlow />
       <DepthType
         text="Cisco Lab"
-        className="absolute left-1/2 top-[9%] -translate-x-1/2 [--lp-depth-size:clamp(64px,13vw,180px)]"
+        className="absolute left-1/2 top-[6%] -translate-x-1/2 [--lp-depth-size:clamp(64px,13vw,180px)]"
       />
-      <Suspense>
-        <LoginCard />
-      </Suspense>
+      <section className="relative z-10 hidden justify-items-center gap-2 lg:grid">
+        <CrestOrbit src="/brand/ictu-shield.png" label="The ICT University" size={200} />
+        <p className="lp-login__tag">Imparting ICTs in all academic disciplines</p>
+      </section>
+      <div className="relative z-10 grid place-items-center px-4 py-10">
+        <Suspense>
+          <LoginCard />
+        </Suspense>
+      </div>
     </main>
   );
 }
