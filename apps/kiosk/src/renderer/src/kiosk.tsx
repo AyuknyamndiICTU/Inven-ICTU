@@ -17,6 +17,7 @@ import { ReturnStage } from './screens/return';
 import { StudentStage } from './screens/student';
 import { SuccessStage } from './screens/success';
 import { playCue } from './sound';
+import crest from './assets/ictu-shield.png';
 
 const ASSISTANT_HOLD_MS = 2000;
 
@@ -251,7 +252,7 @@ export function Kiosk({ status }: { status: KioskStatus }) {
       <HorizonGlow tone={glow} />
       <header className="k-top">
         <div className="k-brand" {...longPress} aria-label={t('app.name')}>
-          <span className="k-brand__mark" aria-hidden />
+          <img className="k-brand__mark" src={crest} alt="" draggable={false} />
           <span className="k-brand__name">{t('app.name')}</span>
           <span className="k-brand__lab">{t('app.lab')}</span>
         </div>

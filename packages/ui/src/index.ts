@@ -64,3 +64,4 @@ export {
   SfpIcon,
   SwitchIcon,
 } from './icons/equipment';
+export { CrestOrbit, type CrestOrbitProps } from './theatre/crest-orbit';

@@ -1,5 +1,15 @@
 import { motionTokens, tween } from '@labpass/motion';
-import { Button, DepthType, LiveChallengeQR, LiveTicker, ReaderEye, type ReaderEyeState } from '@labpass/ui';
+import {
+  Button,
+  CrestOrbit,
+  DepthType,
+  LiveChallengeQR,
+  LiveTicker,
+  ReaderEye,
+  useTheatreLevel,
+  type ReaderEyeState,
+} from '@labpass/ui';
+import crest from '../assets/ictu-shield.png';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import type { KioskStatus, TickerEntry } from '../../../shared/ipc';
@@ -43,6 +53,7 @@ export function HomeStage({
   onScanText: (text: string) => void;
 }) {
   const { t } = useI18n();
+  const level = useTheatreLevel();
   const [camera, setCamera] = useState(false);
   const readerMissing = status.reader.status === 'DISCONNECTED' || status.reader.status === 'ERROR';
   const offline = !status.online && !status.offline.mode;
@@ -69,7 +80,30 @@ export function HomeStage({
     <div className="k-home" data-mode={mode}>
       <section className="k-home__hero">
         <DepthType text={t('kiosk.depth')} className="k-home__depth" />
-        <ReaderEye state={eye} size={360} className="k-home__eye" />
+        <AnimatePresence mode="wait" initial={false}>
+          {eye === 'idle' ? (
+            <motion.div
+              key="crest"
+              className="k-home__crest"
+              initial={{ opacity: 0, scale: motionTokens.scale.press }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: motionTokens.scale.press }}
+              transition={tween('slow')}
+            >
+              <CrestOrbit src={crest} label={t('app.university')} size={230} still={level === 'minimal'} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="eye"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={tween('fast')}
+            >
+              <ReaderEye state={eye} size={360} className="k-home__eye" />
+            </motion.div>
+          )}
+        </AnimatePresence>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={`${mode}:${headline}`}

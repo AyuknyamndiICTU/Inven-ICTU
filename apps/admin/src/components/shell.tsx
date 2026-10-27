@@ -210,10 +210,10 @@ export function Shell({ children }: { children: ReactNode }) {
 
       <aside className="lp-side">
         <Link href="/" className="lp-side__brand" title="LabPass">
-          <span className="lp-brand-mark" aria-hidden />
+          <img src="/brand/ictu-shield.png" alt="" className="lp-crest-mark" />
           <span className="lp-nav__text grid leading-tight">
             <span className="lp-side__name">LabPass</span>
-            <span className="lp-side__sub">{t('app.lab')}</span>
+            <span className="lp-side__sub">{t('app.university')}</span>
           </span>
         </Link>
         <nav aria-label={t('app.name')} className="lp-side__nav">

@@ -59,3 +59,8 @@ deploy/downloads/
 # Expo prebuild output (generated from app.json; never edited by hand)
 apps/mobile/android/
 apps/mobile/ios/
+
+# Kiosk installer resources (electron-builder buildResources)
+!apps/kiosk/build/
+apps/kiosk/build/*
+!apps/kiosk/build/icon.png

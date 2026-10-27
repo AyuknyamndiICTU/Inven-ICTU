@@ -6,12 +6,21 @@
 export const palette = {
   ink: { 950: '#07080A', 900: '#0E1014', 800: '#171A20', 700: '#22262E', 600: '#2E333D' },
   paper: { 0: '#FFFFFF', 50: '#FAFAF9', 100: '#F3F3F1', 200: '#E7E6E3' },
-  signal: { 300: '#7FE3FF', 500: '#00A3E0', 700: '#00739E' },
+  /** Brand signal = ICTU crest orange/gold (was cyan before the brand guide). */
+  signal: { 300: '#F7C26B', 500: '#E87D01', 700: '#A85A00' },
   ok: { 300: '#47CD89', 500: '#12B76A', 700: '#067647' },
   low: { 300: '#FDB022', 500: '#F5A524', 700: '#B54708' },
   out: { 300: '#F97066', 500: '#F04438', 700: '#B42318' },
-  /** Placeholders until ICTU Communications provides the brand guide (Q11). */
-  ictu: { primary: '#0B3D91', accent: '#F2A900' },
+  /** ICT University crest (decision Q11): navy shield bands, orange ring, gold rim, silver field. */
+  ictu: {
+    navy: '#05014D',
+    indigo: '#2B2390',
+    violet: '#4B3FC4',
+    orange: '#E87D01',
+    amber: '#F7A23B',
+    gold: '#EBC37E',
+    cream: '#F4EFE3',
+  },
 } as const;
 
 /** Semantic roles. `light` is the admin default; the kiosk always uses `dark`. */
@@ -24,10 +33,10 @@ export const themes = {
     text: '#171717',
     textMuted: '#6B6F76',
     line: palette.paper[200],
-    accent: palette.signal[700],
-    accentFill: palette.signal[500],
+    accent: '#2B2390',
+    accentFill: '#1E1878',
     accentOn: '#FFFFFF',
-    focus: palette.signal[700],
+    focus: '#2B2390',
     ok: palette.ok[500],
     okText: palette.ok[700],
     low: palette.low[500],
@@ -36,17 +45,17 @@ export const themes = {
     outText: palette.out[700],
   },
   dark: {
-    bg: palette.ink[950],
-    surface: palette.ink[900],
-    surfaceRaised: palette.ink[800],
-    surfaceSunken: palette.ink[950],
+    bg: '#050320',
+    surface: '#0B0833',
+    surfaceRaised: '#141047',
+    surfaceSunken: '#03021A',
     text: '#F5F6F7',
     textMuted: '#9AA0A8',
     line: 'rgba(255,255,255,0.08)',
-    accent: palette.signal[300],
-    accentFill: palette.signal[500],
-    accentOn: palette.ink[950],
-    focus: palette.signal[300],
+    accent: '#EBC37E',
+    accentFill: '#E87D01',
+    accentOn: '#05014D',
+    focus: '#EBC37E',
     ok: palette.ok[500],
     okText: palette.ok[300],
     low: palette.low[500],
@@ -90,12 +99,30 @@ export const space = { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 
 /** Minimum touch target sizes in px (DESIGN §3). */
 export const touchTarget = { kiosk: 56, default: 44 } as const;
 
-export const shadow = {
-  float: '0 1px 2px rgba(16,24,40,0.06), 0 12px 32px -12px rgba(16,24,40,0.18)',
-  glow: '0 0 0 1px rgba(127,227,255,0.25), 0 0 32px rgba(0,163,224,0.35)',
+/** ICTU brand gradients (crest colours): navy → indigo → orange → gold. */
+export const gradient = {
+  brand: ['#05014D', '#2B2390', '#E87D01', '#EBC37E'],
+  warm: ['#E87D01', '#F7A23B', '#EBC37E'],
+  deep: ['#03021A', '#0B0833', '#1E1878'],
 } as const;
 
-export const tokens = { palette, themes, font, fontSize, tracking, radius, space, touchTarget, shadow } as const;
+export const shadow = {
+  float: '0 1px 2px rgba(16,24,40,0.06), 0 12px 32px -12px rgba(16,24,40,0.18)',
+  glow: '0 0 0 1px rgba(235,195,126,0.35), 0 0 32px rgba(232,125,1,0.4)',
+} as const;
+
+export const tokens = {
+  palette,
+  themes,
+  font,
+  fontSize,
+  tracking,
+  radius,
+  space,
+  touchTarget,
+  shadow,
+  gradient,
+} as const;
 export type Tokens = typeof tokens;
 
 // ---- Contrast utilities (WCAG 2.2) ----
