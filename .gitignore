@@ -55,3 +55,7 @@ deploy/secrets/*
 !deploy/secrets/README.md
 deploy/backups/
 deploy/downloads/
+
+# Expo prebuild output (generated from app.json; never edited by hand)
+apps/mobile/android/
+apps/mobile/ios/
