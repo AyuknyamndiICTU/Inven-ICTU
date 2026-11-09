@@ -212,13 +212,18 @@ describe('KioskService (main-process orchestration)', () => {
     const key = '6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b';
     const receipt = await k.service.run('signIn', {
       idempotencyKey: key,
+      location: 'IT Hall',
       lines: [{ equipmentId: router.id, quantity: 2 }],
     });
     expect(receipt.kind).toBe('BORROW');
     expect(router.available).toBe(4);
     // Session is single-use in main: a second borrow needs a new tap.
     await expect(
-      k.service.run('signIn', { idempotencyKey: key, lines: [{ equipmentId: router.id, quantity: 2 }] }),
+      k.service.run('signIn', {
+        idempotencyKey: key,
+        location: 'IT Hall',
+        lines: [{ equipmentId: router.id, quantity: 2 }],
+      }),
     ).rejects.toMatchObject({
       info: { code: 'SESSION_EXPIRED' },
     });
@@ -235,6 +240,7 @@ describe('KioskService (main-process orchestration)', () => {
     await expect(
       k.service.run('signIn', {
         idempotencyKey: '7a1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b',
+        location: 'IT Hall',
         lines: [{ equipmentId: isr.id, quantity: 3 }],
       }),
     ).rejects.toMatchObject({ info: { code: 'INSUFFICIENT_STOCK', status: 409, details: { available: 1 } } });
@@ -364,7 +370,7 @@ describe('typed IPC', () => {
       ok: false,
       error: { code: 'FORBIDDEN_SENDER' },
     });
-    expect(await call('signIn', { idempotencyKey: 'x', lines: [] })).toMatchObject({
+    expect(await call('signIn', { idempotencyKey: 'x', location: 'IT Hall', lines: [] })).toMatchObject({
       ok: false,
       error: { code: 'INVALID_INPUT' },
     });

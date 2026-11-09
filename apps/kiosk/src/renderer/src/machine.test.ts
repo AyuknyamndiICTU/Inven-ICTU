@@ -40,6 +40,7 @@ const receipt = (kind: 'BORROW' | 'RETURN'): Receipt => ({
   occurredAt: new Date().toISOString(),
   dueAt: null,
   studentFirstName: 'Ama',
+  location: null,
   lines: [],
   offline: false,
 });
