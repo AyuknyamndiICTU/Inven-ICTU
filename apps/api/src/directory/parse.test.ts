@@ -115,15 +115,16 @@ describe('directory parsing (ARCH §9)', () => {
       'ICTU022,Jean,Kamga,02/03/2004,,expelled',
     ].join('\n');
     const table = await parseTable(Buffer.from(csv));
-    const { records, issues } = validateStudents(table, autoMap(table.headers, 'STUDENTS'));
+    const { records, issues, warnings } = validateStudents(table, autoMap(table.headers, 'STUDENTS'));
     expect(records.map((r) => r.matricule)).toEqual(['ICTU020']);
+    // A bad email never blocks a student on its own: it is reported and left empty.
+    expect(warnings).toEqual([expect.objectContaining({ row: 5, field: 'email' })]);
     expect(issues).toEqual(
       expect.arrayContaining([
         { row: 3, field: 'matricule', message: 'Duplicate matricule in this file' },
         { row: 4, field: 'matricule', message: 'Matricule has invalid characters' },
         { row: 5, field: 'first_name', message: 'First name is required' },
         expect.objectContaining({ row: 5, field: 'date_of_birth' }),
-        expect.objectContaining({ row: 5, field: 'email' }),
         expect.objectContaining({ row: 6, field: 'status' }),
       ]),
     );

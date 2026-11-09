@@ -238,7 +238,7 @@ export class CredentialRequestsService {
           matricule: sub.matricule ?? '',
           firstName: sub.firstName ?? '',
           lastName: sub.lastName ?? '',
-          dateOfBirth: sub.dateOfBirth ?? '1900-01-01',
+          dateOfBirth: sub.dateOfBirth ?? null,
         },
         matchResult: r.matchResult as {
           matricule: boolean;

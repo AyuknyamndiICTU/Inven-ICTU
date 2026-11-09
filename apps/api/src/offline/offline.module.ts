@@ -223,7 +223,11 @@ export class OfflineService {
     try {
       if (t.kind === 'BORROW') {
         if (!t.borrowLines.length) return 'UNKNOWN_LINE';
-        const r = await this.lending.replayBorrow(kioskId, { ...base, method: t.method }, t.borrowLines);
+        const r = await this.lending.replayBorrow(
+          kioskId,
+          { ...base, method: t.method, location: t.location },
+          t.borrowLines,
+        );
         return r.replayed ? 'duplicate' : 'applied';
       }
       if (!t.returnLines.length) return 'UNKNOWN_LINE';
@@ -338,10 +342,15 @@ export class OfflineService {
       const base = { txId: t.txId, studentId: t.studentId, occurredAt: new Date(t.occurredAt) };
       try {
         if (t.kind === 'BORROW') {
-          await this.lending.replayBorrow(c.batch.kioskId, { ...base, method: t.method }, t.borrowLines, {
-            allowInactive: true,
-            correction: { adminId, reason: `Offline conflict ${c.id}: ${body.note}` },
-          });
+          await this.lending.replayBorrow(
+            c.batch.kioskId,
+            { ...base, method: t.method, location: t.location },
+            t.borrowLines,
+            {
+              allowInactive: true,
+              correction: { adminId, reason: `Offline conflict ${c.id}: ${body.note}` },
+            },
+          );
         } else {
           await this.lending.replayReturn(c.batch.kioskId, base, t.returnLines);
         }

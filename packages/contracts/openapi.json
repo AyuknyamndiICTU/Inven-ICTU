@@ -2535,6 +2535,29 @@
                         }
                       ]
                     },
+                    "lendingLocations": {
+                      "default": [
+                        "Chumbow Hall",
+                        "Eric Mbarika Hall",
+                        "George Mbarika Hall",
+                        "Terry & Linda Hall",
+                        "IT Hall",
+                        "French Hall 1",
+                        "French Hall 2",
+                        "Chapel Hall",
+                        "Pondi Hall",
+                        "Radio Station",
+                        "Computer Lab"
+                      ],
+                      "minItems": 1,
+                      "maxItems": 40,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 60
+                      }
+                    },
                     "blockWhenOverdue": {
                       "default": true,
                       "type": "boolean"
@@ -2695,6 +2718,7 @@
                     "manualEntryPolicy",
                     "loanDue",
                     "maxItemsPerStudent",
+                    "lendingLocations",
                     "blockWhenOverdue",
                     "globalLowStockThreshold",
                     "quietHours",
@@ -2879,6 +2903,29 @@
                         }
                       ]
                     },
+                    "lendingLocations": {
+                      "default": [
+                        "Chumbow Hall",
+                        "Eric Mbarika Hall",
+                        "George Mbarika Hall",
+                        "Terry & Linda Hall",
+                        "IT Hall",
+                        "French Hall 1",
+                        "French Hall 2",
+                        "Chapel Hall",
+                        "Pondi Hall",
+                        "Radio Station",
+                        "Computer Lab"
+                      ],
+                      "minItems": 1,
+                      "maxItems": 40,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 60
+                      }
+                    },
                     "blockWhenOverdue": {
                       "default": true,
                       "type": "boolean"
@@ -3039,6 +3086,7 @@
                     "manualEntryPolicy",
                     "loanDue",
                     "maxItemsPerStudent",
+                    "lendingLocations",
                     "blockWhenOverdue",
                     "globalLowStockThreshold",
                     "quietHours",
@@ -3191,6 +3239,29 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "lendingLocations": {
+                    "default": [
+                      "Chumbow Hall",
+                      "Eric Mbarika Hall",
+                      "George Mbarika Hall",
+                      "Terry & Linda Hall",
+                      "IT Hall",
+                      "French Hall 1",
+                      "French Hall 2",
+                      "Chapel Hall",
+                      "Pondi Hall",
+                      "Radio Station",
+                      "Computer Lab"
+                    ],
+                    "minItems": 1,
+                    "maxItems": 40,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 60
+                    }
                   },
                   "blockWhenOverdue": {
                     "default": true,
@@ -4088,6 +4159,29 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "lendingLocations": {
+                          "default": [
+                            "Chumbow Hall",
+                            "Eric Mbarika Hall",
+                            "George Mbarika Hall",
+                            "Terry & Linda Hall",
+                            "IT Hall",
+                            "French Hall 1",
+                            "French Hall 2",
+                            "Chapel Hall",
+                            "Pondi Hall",
+                            "Radio Station",
+                            "Computer Lab"
+                          ],
+                          "minItems": 1,
+                          "maxItems": 40,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 60
+                          }
                         }
                       },
                       "required": [
@@ -4096,7 +4190,8 @@
                         "kiosk",
                         "cardAuthMode",
                         "offlineMaxHours",
-                        "maxItemsPerStudent"
+                        "maxItemsPerStudent",
+                        "lendingLocations"
                       ],
                       "additionalProperties": false
                     }
@@ -4328,6 +4423,29 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "lendingLocations": {
+                      "default": [
+                        "Chumbow Hall",
+                        "Eric Mbarika Hall",
+                        "George Mbarika Hall",
+                        "Terry & Linda Hall",
+                        "IT Hall",
+                        "French Hall 1",
+                        "French Hall 2",
+                        "Chapel Hall",
+                        "Pondi Hall",
+                        "Radio Station",
+                        "Computer Lab"
+                      ],
+                      "minItems": 1,
+                      "maxItems": 40,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 60
+                      }
                     }
                   },
                   "required": [
@@ -4336,7 +4454,8 @@
                     "kiosk",
                     "cardAuthMode",
                     "offlineMaxHours",
-                    "maxItemsPerStudent"
+                    "maxItemsPerStudent",
+                    "lendingLocations"
                   ],
                   "additionalProperties": false
                 }
@@ -6460,6 +6579,13 @@
                     "studentFirstName": {
                       "type": "string"
                     },
+                    "location": {
+                      "default": null,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "lines": {
                       "type": "array",
                       "items": {
@@ -6512,6 +6638,7 @@
                     "occurredAt",
                     "dueAt",
                     "studentFirstName",
+                    "location",
                     "lines",
                     "offline"
                   ],
@@ -6541,6 +6668,11 @@
                   "session": {
                     "type": "string",
                     "minLength": 10
+                  },
+                  "location": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80
                   },
                   "lines": {
                     "minItems": 1,
@@ -6646,6 +6778,13 @@
                     "studentFirstName": {
                       "type": "string"
                     },
+                    "location": {
+                      "default": null,
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "lines": {
                       "type": "array",
                       "items": {
@@ -6698,6 +6837,7 @@
                     "occurredAt",
                     "dueAt",
                     "studentFirstName",
+                    "location",
                     "lines",
                     "offline"
                   ],
@@ -7372,6 +7512,11 @@
                               "quantity"
                             ]
                           }
+                        },
+                        "location": {
+                          "type": "string",
+                          "minLength": 2,
+                          "maxLength": 80
                         },
                         "returnLines": {
                           "default": [],
@@ -9400,6 +9545,15 @@
             }
           },
           {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
             "name": "search",
             "in": "query",
             "required": false,
@@ -9515,6 +9669,12 @@
                               }
                             ]
                           },
+                          "location": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "status": {
                             "type": "string",
                             "enum": [
@@ -9601,6 +9761,7 @@
                           "openedAt",
                           "dueAt",
                           "closedAt",
+                          "location",
                           "status",
                           "overdue",
                           "lines"
@@ -9775,6 +9936,12 @@
                         }
                       ]
                     },
+                    "location": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -9861,6 +10028,7 @@
                     "openedAt",
                     "dueAt",
                     "closedAt",
+                    "location",
                     "status",
                     "overdue",
                     "lines"
@@ -10022,6 +10190,12 @@
                         }
                       ]
                     },
+                    "location": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -10108,6 +10282,7 @@
                     "openedAt",
                     "dueAt",
                     "closedAt",
+                    "location",
                     "status",
                     "overdue",
                     "lines"
@@ -10233,6 +10408,15 @@
             }
           },
           {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
             "name": "search",
             "in": "query",
             "required": false,
@@ -10323,6 +10507,15 @@
                 "INACTIVE",
                 "SUSPENDED"
               ]
+            }
+          },
+          {
+            "name": "program",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
             }
           }
         ],
@@ -10525,6 +10718,12 @@
                         "null"
                       ]
                     },
+                    "personalEmail": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "phone": {
                       "type": [
                         "string",
@@ -10541,6 +10740,24 @@
                         {
                           "type": "null"
                         }
+                      ]
+                    },
+                    "gender": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "nationality": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "section": {
+                      "type": [
+                        "string",
+                        "null"
                       ]
                     },
                     "photoUrl": {
@@ -10766,8 +10983,12 @@
                     "hasCredential",
                     "openLoans",
                     "email",
+                    "personalEmail",
                     "phone",
                     "dateOfBirth",
+                    "gender",
+                    "nationality",
+                    "section",
                     "photoUrl",
                     "hasPin",
                     "pinLocked",
@@ -13977,7 +14198,6 @@
                   "matricule",
                   "firstName",
                   "lastName",
-                  "dateOfBirth",
                   "platform"
                 ]
               }
@@ -15076,6 +15296,12 @@
                       "overdue": {
                         "type": "boolean"
                       },
+                      "location": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
                       "lines": {
                         "type": "array",
                         "items": {
@@ -15103,6 +15329,7 @@
                       "openedAt",
                       "dueAt",
                       "overdue",
+                      "location",
                       "lines"
                     ],
                     "additionalProperties": false
@@ -15660,9 +15887,16 @@
                             "type": "string"
                           },
                           "dateOfBirth": {
-                            "type": "string",
-                            "format": "date",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -15892,9 +16126,16 @@
                           "type": "string"
                         },
                         "dateOfBirth": {
-                          "type": "string",
-                          "format": "date",
-                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -16139,9 +16380,16 @@
                           "type": "string"
                         },
                         "dateOfBirth": {
-                          "type": "string",
-                          "format": "date",
-                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -17433,6 +17681,34 @@
                         "additionalProperties": false
                       }
                     },
+                    "byLocation": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "location": {
+                            "type": "string"
+                          },
+                          "loans": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "quantity": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "location",
+                          "loans",
+                          "quantity"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "uniqueStudents": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -17445,6 +17721,7 @@
                     "byItem",
                     "byDay",
                     "byHour",
+                    "byLocation",
                     "uniqueStudents"
                   ],
                   "additionalProperties": false
@@ -18496,6 +18773,29 @@
                 "type": "null"
               }
             ]
+          },
+          "lendingLocations": {
+            "default": [
+              "Chumbow Hall",
+              "Eric Mbarika Hall",
+              "George Mbarika Hall",
+              "Terry & Linda Hall",
+              "IT Hall",
+              "French Hall 1",
+              "French Hall 2",
+              "Chapel Hall",
+              "Pondi Hall",
+              "Radio Station",
+              "Computer Lab"
+            ],
+            "minItems": 1,
+            "maxItems": 40,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            }
           }
         },
         "required": [
@@ -18504,7 +18804,8 @@
           "kiosk",
           "cardAuthMode",
           "offlineMaxHours",
-          "maxItemsPerStudent"
+          "maxItemsPerStudent",
+          "lendingLocations"
         ],
         "additionalProperties": false
       },

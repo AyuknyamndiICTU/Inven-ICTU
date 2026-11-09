@@ -79,6 +79,8 @@ export const OfflineTransaction = z.object({
     z.object({ type: z.literal('ASSISTANT'), assistantId: Uuid, mac: B64Url }),
   ]),
   borrowLines: z.array(z.object({ equipmentId: Uuid, quantity: z.int().min(1) })).default([]),
+  /** Where the equipment is used (borrows only). */
+  location: z.string().trim().min(2).max(80).optional(),
   returnLines: z
     .array(z.object({ loanLineId: Uuid, quantity: z.int().min(1), condition: z.enum(['OK', 'DAMAGED']) }))
     .default([]),

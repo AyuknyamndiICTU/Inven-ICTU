@@ -21,6 +21,8 @@ type ReplayOptions = {
   allowInactive?: boolean;
   /** Admin accepted an offline stock conflict: correct the stock before recording the loan. */
   correction?: { adminId: string; reason: string };
+  /** Where the equipment is used (Chumbow Hall, …). */
+  location?: string;
 };
 
 const OVERDUE_JOB = 'loans-overdue';
@@ -48,6 +50,7 @@ export function loanDto(l: LoanRow, now = Date.now()) {
     openedAt: (l.occurredAt ?? l.openedAt).toISOString(),
     dueAt: l.dueAt.toISOString(),
     closedAt: l.closedAt?.toISOString() ?? null,
+    location: l.location,
     status: l.status,
     overdue: l.status === 'OPEN' && l.dueAt.getTime() < now,
     lines: l.lines.map((ln) => ({
@@ -81,7 +84,7 @@ export class LendingService implements OnApplicationBootstrap {
 
   async signIn(
     kioskId: string,
-    body: { session: string; lines: Array<{ equipmentId: string; quantity: number }> },
+    body: { session: string; location?: string; lines: Array<{ equipmentId: string; quantity: number }> },
     idemKey: string,
     opts: { occurredAt?: Date; offline?: boolean } = {},
   ) {
@@ -90,8 +93,8 @@ export class LendingService implements OnApplicationBootstrap {
     const { body: receipt } = await this.idempotency.execute({
       scope: `kiosk.signIn:${kioskId}`,
       key: idemKey,
-      request: { studentId: sess.s, lines },
-      work: (tx) => this.borrow(tx, kioskId, sess, lines, opts),
+      request: { studentId: sess.s, lines, location: body.location ?? null },
+      work: (tx) => this.borrow(tx, kioskId, sess, lines, { ...opts, location: body.location }),
     });
     return receipt;
   }
@@ -179,6 +182,7 @@ export class LendingService implements OnApplicationBootstrap {
         manualVerification: sess.v,
         offline: Boolean(opts.offline),
         occurredAt: opts.occurredAt ?? null,
+        location: opts.location?.trim() || null,
         dueAt: dueAtFor(occurredAt, settings.loanDue),
         lines: { create: lines.map((l) => ({ equipmentId: l.equipmentId, qtyIssued: l.quantity })) },
       },
@@ -205,6 +209,7 @@ export class LendingService implements OnApplicationBootstrap {
       occurredAt: occurredAt.toISOString(),
       dueAt: loan.dueAt.toISOString(),
       studentFirstName: student.firstName,
+      location: loan.location,
       lines: lines.map((l) => ({
         equipmentId: l.equipmentId,
         equipmentName: byEquipment.get(l.equipmentId)!,
@@ -260,7 +265,13 @@ export class LendingService implements OnApplicationBootstrap {
    */
   async replayBorrow(
     kioskId: string,
-    tx: { txId: string; studentId: string; method: 'CARD' | 'HCE' | 'SCAN' | 'MANUAL'; occurredAt: Date },
+    tx: {
+      txId: string;
+      studentId: string;
+      method: 'CARD' | 'HCE' | 'SCAN' | 'MANUAL';
+      occurredAt: Date;
+      location?: string;
+    },
     rawLines: Array<{ equipmentId: string; quantity: number }>,
     opts: Pick<ReplayOptions, 'allowInactive' | 'correction'> = {},
   ) {
@@ -270,7 +281,13 @@ export class LendingService implements OnApplicationBootstrap {
       scope: `kiosk.offline:${kioskId}`,
       key: tx.txId,
       request: { studentId: tx.studentId, kind: 'BORROW', lines },
-      work: (t) => this.borrow(t, kioskId, sess, lines, { ...opts, offline: true, occurredAt: tx.occurredAt }),
+      work: (t) =>
+        this.borrow(t, kioskId, sess, lines, {
+          ...opts,
+          offline: true,
+          occurredAt: tx.occurredAt,
+          location: tx.location,
+        }),
     });
   }
 
@@ -417,6 +434,7 @@ export class LendingService implements OnApplicationBootstrap {
     studentId?: string;
     equipmentId?: string;
     search?: string;
+    location?: string;
   }): Prisma.LoanWhereInput {
     return {
       ...(q.status === 'OVERDUE'
@@ -426,6 +444,7 @@ export class LendingService implements OnApplicationBootstrap {
           : {}),
       ...(q.studentId ? { studentId: q.studentId } : {}),
       ...(q.equipmentId ? { lines: { some: { equipmentId: q.equipmentId } } } : {}),
+      ...(q.location ? { location: { equals: q.location, mode: 'insensitive' as const } } : {}),
       ...(q.search
         ? {
             student: {
@@ -539,6 +558,7 @@ export class LendingService implements OnApplicationBootstrap {
         openedAt: d.openedAt,
         dueAt: d.dueAt,
         overdue: d.overdue,
+        location: d.location,
         lines: d.lines
           .filter((x) => x.outstanding > 0)
           .map((x) => ({ equipmentName: x.equipmentName, outstanding: x.outstanding })),

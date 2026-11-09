@@ -66,24 +66,30 @@ export class StudentsService {
   }
 
   async list(q: In<'students.list'>['query']) {
-    const where: Prisma.StudentWhereInput = q.status ? { status: q.status } : {};
+    const where: Prisma.StudentWhereInput = {
+      ...(q.status ? { status: q.status } : {}),
+      ...(q.program ? { program: { equals: q.program, mode: 'insensitive' } } : {}),
+    };
     let ids: string[] | undefined;
     let total: number;
     if (q.search) {
       const term = `%${q.search.toLowerCase().replace(/[%_\\]/g, (m) => `\\${m}`)}%`;
       const status = q.status ?? null;
+      const program = q.program ?? null;
       const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM students
         WHERE (lower("firstName" || ' ' || "lastName") LIKE ${term} OR lower(matricule) LIKE ${term}
-               OR lower("lastName" || ' ' || "firstName") LIKE ${term})
+               OR lower("lastName" || ' ' || "firstName") LIKE ${term} OR lower(coalesce(program, '')) LIKE ${term})
           AND (${status}::text IS NULL OR status::text = ${status})
+          AND (${program}::text IS NULL OR lower(program) = lower(${program}))
         ORDER BY "lastName", "firstName"
         LIMIT ${q.pageSize} OFFSET ${(q.page - 1) * q.pageSize}`;
       const [{ count }] = (await this.prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT count(*)::bigint AS count FROM students
         WHERE (lower("firstName" || ' ' || "lastName") LIKE ${term} OR lower(matricule) LIKE ${term}
-               OR lower("lastName" || ' ' || "firstName") LIKE ${term})
-          AND (${status}::text IS NULL OR status::text = ${status})`) as [{ count: bigint }];
+               OR lower("lastName" || ' ' || "firstName") LIKE ${term} OR lower(coalesce(program, '')) LIKE ${term})
+          AND (${status}::text IS NULL OR status::text = ${status})
+          AND (${program}::text IS NULL OR lower(program) = lower(${program}))`) as [{ count: bigint }];
       ids = rows.map((r) => r.id);
       total = Number(count);
     } else {
@@ -142,8 +148,12 @@ export class StudentsService {
       openLoans: s._count.loans,
       // ARCH §7: contacts are masked and the date of birth hidden below LAB_ADMIN.
       email: full ? s.email : maskContact(s.email),
+      personalEmail: full ? s.personalEmail : maskContact(s.personalEmail),
       phone: full ? s.phone : maskContact(s.phone),
-      dateOfBirth: full ? s.dateOfBirth.toISOString().slice(0, 10) : null,
+      dateOfBirth: full && s.dateOfBirth ? s.dateOfBirth.toISOString().slice(0, 10) : null,
+      gender: s.gender,
+      nationality: full ? s.nationality : null,
+      section: s.section,
       photoUrl: this.files.url(s.photoKey),
       hasPin: Boolean(s.manualPinHash),
       pinLocked: Boolean(s.pinLockedUntil && s.pinLockedUntil > new Date()),
