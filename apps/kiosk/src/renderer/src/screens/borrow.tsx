@@ -8,7 +8,8 @@ import {
   QuantityStepper,
   Skeleton,
 } from '@labpass/ui';
-import { ArrowLeft, X } from 'lucide-react';
+import { ArrowLeft, MapPin, X } from 'lucide-react';
+import { useState } from 'react';
 import type { KioskEquipment } from '../../../shared/ipc';
 import { Notice, StageTitle } from '../components';
 import { useI18n } from '../i18n';
@@ -21,6 +22,8 @@ export function BorrowStage({
   notice,
   busy,
   name,
+  location,
+  locations,
   send,
 }: {
   catalog: KioskEquipment[] | null;
@@ -28,10 +31,16 @@ export function BorrowStage({
   notice: string | null;
   busy: boolean;
   name: string;
+  location: string | null;
+  locations: string[];
   send: (e: KioskMachineEvent) => void;
 }) {
   const { t } = useI18n();
   const total = cart.reduce((n, l) => n + l.qty, 0);
+  const OTHER = '__other__';
+  const [other, setOther] = useState(() => Boolean(location && !locations.includes(location)));
+  const choice = other ? OTHER : (location ?? '');
+  const needsLocation = total > 0 && !location;
   const healthLabels = { OK: t('common.inStock'), LOW: t('common.lowStock'), OUT: t('common.outOfStock') };
 
   const add = (item: ComboItem) =>
@@ -76,6 +85,46 @@ export function BorrowStage({
         </section>
 
         <section className="k-borrow__cart" aria-label={t('kiosk.cart')}>
+          <div className="k-location">
+            <label className="k-location__label" htmlFor="k-location">
+              <MapPin size={22} aria-hidden /> {t('kiosk.locationLabel')}
+            </label>
+            <select
+              id="k-location"
+              className={`k-select ${choice ? 'is-set' : ''}`}
+              value={choice}
+              disabled={busy}
+              onChange={(e) => {
+                const v = e.target.value;
+                setOther(v === OTHER);
+                send({ type: 'SET_LOCATION', location: v === OTHER || v === '' ? null : v });
+              }}
+            >
+              <option value="" disabled>
+                {t('kiosk.locationPlaceholder')}
+              </option>
+              {locations.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+              <option value={OTHER}>{t('kiosk.locationOther')}</option>
+            </select>
+            {other && (
+              <input
+                className="k-input"
+                aria-label={t('kiosk.locationOtherLabel')}
+                placeholder={t('kiosk.locationOtherLabel')}
+                maxLength={80}
+                autoFocus
+                defaultValue={location ?? ''}
+                disabled={busy}
+                onChange={(e) =>
+                  send({ type: 'SET_LOCATION', location: e.target.value.trim().length >= 2 ? e.target.value : null })
+                }
+              />
+            )}
+          </div>
           <h2 className="k-kicker">{t('kiosk.cart')}</h2>
           {notice && <Notice>{notice}</Notice>}
           {cart.length === 0 ? (
@@ -119,10 +168,15 @@ export function BorrowStage({
               </ul>
             </>
           )}
+          {needsLocation && (
+            <p className="k-location__hint" role="status">
+              {t('kiosk.locationRequired')}
+            </p>
+          )}
           <Button
             size="kiosk"
             className="k-confirm"
-            disabled={total === 0}
+            disabled={total === 0 || !location}
             loading={busy}
             onClick={() => send({ type: 'CONFIRM' })}
           >
