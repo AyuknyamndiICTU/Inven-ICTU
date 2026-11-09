@@ -413,14 +413,71 @@
     --lp-combo-h: calc(100dvh - 400px);
   }
   .k-borrow__cart {
-    display: grid;
-    grid-template-rows: auto auto auto 1fr auto;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
     min-height: 0;
+    overflow-y: auto;
     padding: clamp(20px, 1.8vw, 32px);
     border-radius: var(--radius-card);
     border: 1px solid var(--color-line);
     background: rgb(255 255 255 / 0.03);
+  }
+  .k-borrow__cart .k-confirm {
+    margin-top: auto;
+  }
+  .k-location {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in oklab, var(--color-signal-500) 45%, transparent);
+    background: linear-gradient(120deg, rgb(43 35 144 / 0.35), rgb(232 125 1 / 0.12));
+  }
+  .k-location__label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-signal-300);
+  }
+  .k-select,
+  .k-input {
+    min-height: 60px;
+    width: 100%;
+    padding: 0 18px;
+    border-radius: 14px;
+    border: 1px solid var(--color-line);
+    background: rgb(5 3 32 / 0.6);
+    color: var(--color-text);
+    font: 500 20px var(--font-sans);
+  }
+  .k-select {
+    appearance: none;
+    padding-right: 52px;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' fill='none' stroke='%23F7C26B' stroke-width='2.2'%3E%3Cpath d='m1.5 1.5 6.5 6.5 6.5-6.5'/%3E%3C/svg%3E")
+        no-repeat right 20px center,
+      rgb(5 3 32 / 0.6);
+    cursor: pointer;
+  }
+  .k-select:not(.is-set) {
+    color: var(--color-text-muted);
+  }
+  .k-select option {
+    color: #111;
+    background: #fff;
+  }
+  .k-select:focus-visible,
+  .k-input:focus-visible {
+    outline: 3px solid var(--color-signal-300);
+    outline-offset: 2px;
+  }
+  .k-location__hint {
+    font-size: 17px;
+    color: var(--color-signal-300);
+    text-align: center;
   }
   .k-empty {
     font-size: 19px;
