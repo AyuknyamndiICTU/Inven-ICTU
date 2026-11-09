@@ -102,6 +102,20 @@ export default function ReportsPage() {
                 />
               </Panel>
             </div>
+            <Panel title={t('admin.reports.byLocation')}>
+              {r.byLocation.length ? (
+                <Bars
+                  label={t('admin.reports.byLocation')}
+                  rows={r.byLocation.map((l) => ({
+                    key: l.location,
+                    label: l.location === 'Not recorded' ? t('admin.reports.notRecorded') : l.location,
+                    value: l.loans,
+                  }))}
+                />
+              ) : (
+                <p className="text-sm text-text-muted">{t('admin.ui.noResults')}</p>
+              )}
+            </Panel>
             <Panel title={t('admin.reports.byDay')}>
               <Bars
                 label={t('admin.reports.byDay')}

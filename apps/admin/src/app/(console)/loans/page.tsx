@@ -2,7 +2,7 @@
 
 import type { Loan } from '@labpass/contracts/client';
 import { Button, Dialog, Input, StatusCapsule, Table, TBody, Td, Th, THead, Tr, useToast } from '@labpass/ui';
-import { Download, Search, Undo2 } from 'lucide-react';
+import { Download, MapPin, Search, Undo2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useDeferredValue, useEffect, useState, type FormEvent } from 'react';
 import { Loadable, PageHeader, Pager, Select } from '@/components/page';
@@ -126,12 +126,14 @@ function LoansView() {
     initial === 'OVERDUE' || initial === 'CLOSED' || initial === 'OPEN' ? initial : 'OPEN',
   );
   const [search, setSearch] = useState('');
+  const [location, setLocation] = useState('');
+  const settings = useApi('settings.get', undefined, { staleTime: 300_000 });
   const q = useDeferredValue(search.trim());
   const [page, setPage] = useState(1);
   const [returning, setReturning] = useState<Loan | null>(null);
   const loans = useApi(
     'loans.list',
-    { query: { status, search: q || undefined, page, pageSize: 25 } },
+    { query: { status, search: q || undefined, location: location || undefined, page, pageSize: 25 } },
     { placeholderData: (p) => p },
   );
   const tabs: Array<[Status, string]> = [
@@ -153,7 +155,7 @@ function LoansView() {
               onClick={() =>
                 void downloadCsv(
                   'loans.export',
-                  { query: { status, search: q || undefined } },
+                  { query: { status, search: q || undefined, location: location || undefined } },
                   `labpass-loans-${new Date().toISOString().slice(0, 10)}.csv`,
                 )
               }
@@ -187,6 +189,18 @@ function LoansView() {
             onChange={(e) => (setSearch(e.target.value), setPage(1))}
           />
         </div>
+        <div className="min-w-52">
+          <Select
+            label={t('admin.loans.location')}
+            hideLabel
+            value={location}
+            onChange={(v) => (setLocation(v), setPage(1))}
+            options={[
+              { value: '', label: t('admin.loans.anyLocation') },
+              ...(settings.data?.lendingLocations ?? []).map((l) => ({ value: l, label: l })),
+            ]}
+          />
+        </div>
       </div>
       <Loadable query={loans} rows={8}>
         {(p) => (
@@ -196,6 +210,7 @@ function LoansView() {
                 <Tr>
                   <Th>{t('admin.loans.student')}</Th>
                   <Th>{t('admin.loans.items')}</Th>
+                  <Th>{t('admin.loans.location')}</Th>
                   <Th>{t('admin.loans.opened')}</Th>
                   <Th>{t('admin.loans.due')}</Th>
                   <Th>{t('admin.loans.method')}</Th>
@@ -210,7 +225,7 @@ function LoansView() {
               <TBody>
                 {p.items.length === 0 && (
                   <Tr>
-                    <Td colSpan={7} className="text-center text-text-muted">
+                    <Td colSpan={8} className="text-center text-text-muted">
                       {t('admin.loans.empty')}
                     </Td>
                   </Tr>
@@ -246,6 +261,16 @@ function LoansView() {
                           </li>
                         ))}
                       </ul>
+                    </Td>
+                    <Td className="text-sm">
+                      {l.location ? (
+                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                          <MapPin size={14} aria-hidden className="text-accent" />
+                          {l.location}
+                        </span>
+                      ) : (
+                        <span className="text-text-muted">—</span>
+                      )}
                     </Td>
                     <Td className="whitespace-nowrap text-sm">{formatDateTime(l.openedAt, locale)}</Td>
                     <Td className={`whitespace-nowrap text-sm ${l.overdue ? 'font-semibold text-out-text' : ''}`}>
