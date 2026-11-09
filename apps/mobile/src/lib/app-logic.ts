@@ -30,8 +30,8 @@ export function validateEnroll(v: { matricule: string; firstName: string; lastNa
   else if (!/^[A-Za-z0-9/-]{3,32}$/.test(v.matricule.trim())) errors.matricule = 'invalid';
   if (!v.firstName.trim()) errors.firstName = 'required';
   if (!v.lastName.trim()) errors.lastName = 'required';
-  if (!v.dateOfBirth) errors.dateOfBirth = 'required';
-  else {
+  // Optional: admissions records have no date of birth. When given, it must be a real date.
+  if (v.dateOfBirth) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.dateOfBirth);
     const d = m ? new Date(`${v.dateOfBirth}T00:00:00Z`) : null;
     const ok = d && !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v.dateOfBirth;
