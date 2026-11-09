@@ -424,7 +424,7 @@ export class OfflineEngine {
     return tx;
   }
 
-  signIn(lines: Array<{ equipmentId: string; quantity: number }>): Receipt {
+  signIn(lines: Array<{ equipmentId: string; quantity: number }>, location?: string): Receipt {
     const s = this.requireSession();
     if (this.readOnly())
       fail('OFFLINE_READ_ONLY', 'Borrowing is paused until the server is back. Returns still work.', 403);
@@ -452,13 +452,14 @@ export class OfflineEngine {
       }
     }
     for (const l of lines) this.state.availability[l.equipmentId]! -= l.quantity;
-    const tx = this.record(s, 'BORROW', { borrowLines: lines });
+    const tx = this.record(s, 'BORROW', { borrowLines: lines, ...(location ? { location } : {}) });
     return {
       kind: 'BORROW',
       loanIds: [],
       occurredAt: tx.occurredAt,
       dueAt: null,
       studentFirstName: this.student(s.studentId).firstName,
+      location: location ?? null,
       lines: lines.map((l) => ({
         equipmentId: l.equipmentId,
         equipmentName: b.equipment.find((x) => x.id === l.equipmentId)!.name,
@@ -491,6 +492,7 @@ export class OfflineEngine {
       occurredAt: tx.occurredAt,
       dueAt: null,
       studentFirstName: this.student(s.studentId).firstName,
+      location: null,
       lines: lines.map((l) => ({
         equipmentId: names.get(l.loanLineId)!.equipmentId,
         equipmentName: names.get(l.loanLineId)!.equipmentName,

@@ -66,7 +66,7 @@ export function Kiosk({ status }: { status: KioskStatus }) {
           cardLinkConfirm: fromPromise(({ input }) => call('cardLinkConfirm', input)),
           submit: fromPromise(({ input }: { input: SubmitInput }) =>
             input.kind === 'BORROW'
-              ? call('signIn', { idempotencyKey: input.idempotencyKey, lines: input.lines })
+              ? call('signIn', { idempotencyKey: input.idempotencyKey, location: input.location, lines: input.lines })
               : call('signOut', { idempotencyKey: input.idempotencyKey, lines: input.lines }),
           ),
         },
@@ -305,6 +305,8 @@ export function Kiosk({ status }: { status: KioskStatus }) {
               notice={ctx.notice}
               busy={confirming}
               name={studentName}
+              location={ctx.location}
+              locations={config?.lendingLocations ?? []}
               send={send}
             />
           )}
