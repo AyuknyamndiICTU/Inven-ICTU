@@ -206,6 +206,7 @@ describe('Offline mode round trip (S11.5 Verify)', () => {
     await expect(
       k.service.run('signIn', {
         idempotencyKey: key(),
+        location: 'Pondi Hall',
         lines: [{ equipmentId: k.backend.equipment[3]!.id, quantity: 1 }],
       }),
     ).rejects.toMatchObject({ info: { code: 'INSUFFICIENT_STOCK' } });
