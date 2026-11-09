@@ -492,6 +492,7 @@ export class LendingService implements OnApplicationBootstrap {
     studentId?: string;
     equipmentId?: string;
     search?: string;
+    location?: string;
   }) {
     const rows = await this.prisma.loan.findMany({
       where: this.where(q),
@@ -513,6 +514,7 @@ export class LendingService implements OnApplicationBootstrap {
           r.overdue ? 'OVERDUE' : r.status,
           r.identifyMethod,
           r.manualVerification ?? '',
+          r.location ?? '',
           ln.equipmentCode,
           ln.equipmentName,
           ln.qtyIssued,
@@ -534,6 +536,7 @@ export class LendingService implements OnApplicationBootstrap {
         'status',
         'identify_method',
         'manual_verification',
+        'location',
         'equipment_code',
         'equipment_name',
         'issued',
