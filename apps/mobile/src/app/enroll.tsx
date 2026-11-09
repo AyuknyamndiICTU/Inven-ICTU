@@ -28,7 +28,7 @@ export default function Enroll() {
           matricule: v.matricule.trim().toUpperCase(),
           firstName: v.firstName.trim(),
           lastName: v.lastName.trim(),
-          dateOfBirth: v.dateOfBirth,
+          ...(v.dateOfBirth ? { dateOfBirth: v.dateOfBirth } : {}),
           platform: Platform.OS === 'android' ? 'ANDROID_APP' : 'WEB',
         },
       });
@@ -75,7 +75,7 @@ export default function Enroll() {
         error={msg('lastName')}
       />
       <Field
-        label={t('mobile.dob')}
+        label={t('mobile.dobOptional')}
         value={v.dateOfBirth}
         placeholder="2004-09-21"
         keyboardType="numbers-and-punctuation"
