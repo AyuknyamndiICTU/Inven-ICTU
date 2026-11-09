@@ -333,13 +333,15 @@ function mergeSheets(sheets: Sheet[]): Table {
   const firstHead = first.rows[first.headerAt]!.cells.map((h) => (h === null ? '' : String(h).trim()));
   for (const s of tabular) {
     const head = s.rows[s.headerAt]!.cells.map((h) => (h === null ? '' : String(h).trim()));
-    const lead = head.findIndex((h) => h !== '');
-    const firstLead = firstHead.findIndex((h) => h !== '');
+    // Column offset against the first sheet, from the first header name both sheets share.
+    const firstNorm = firstHead.map(normalizeHeader);
+    const anchor = head.findIndex((h) => h !== '' && firstNorm.includes(normalizeHeader(h)));
+    const offset = anchor < 0 ? 0 : firstNorm.indexOf(normalizeHeader(head[anchor]!)) - anchor;
     const target = head.map((h, i) => {
       let name = h;
       if (!name) {
-        const twin = firstHead[i - lead + firstLead];
-        if (i >= lead - 1 && twin && !head.some((x) => normalizeHeader(x) === normalizeHeader(twin))) name = twin;
+        const twin = firstHead[i + offset];
+        if (twin && !head.some((x) => normalizeHeader(x) === normalizeHeader(twin))) name = twin;
       }
       if (!name) return -1;
       const k = normalizeHeader(name);
