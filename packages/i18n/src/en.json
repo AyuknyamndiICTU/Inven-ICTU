@@ -177,7 +177,13 @@
     },
     "dev": {
       "title": "Simulated reader"
-    }
+    },
+    "locationLabel": "Where will you use it?",
+    "locationPlaceholder": "Choose a hall…",
+    "locationOther": "Other place…",
+    "locationOtherLabel": "Type the place",
+    "locationRequired": "Choose where you will use the equipment.",
+    "usedIn": "For {location}"
   },
   "admin": {
     "dashboard": {
@@ -295,7 +301,9 @@
       "HCE": "Phone tap",
       "SCAN": "Phone scan",
       "MANUAL": "Matricule",
-      "offline": "Offline"
+      "offline": "Offline",
+      "location": "Location",
+      "anyLocation": "All locations"
     },
     "students": {
       "title": "Students",
@@ -334,7 +342,12 @@
       "empty": "No students yet. Import the student list first.",
       "noCards": "No card linked.",
       "noCredentials": "No phone pass.",
-      "synced": "Synced {time}"
+      "synced": "Synced {time}",
+      "personalEmail": "Personal email",
+      "gender": "Gender",
+      "nationality": "Nationality",
+      "section": "Section",
+      "allPrograms": "All programmes"
     },
     "credentials": "Credential requests",
     "alerts": {
@@ -428,7 +441,10 @@
       "general": "Lending rules",
       "language": "Language",
       "overdueReminders": "Overdue reminders to students",
-      "off": "Off"
+      "off": "Off",
+      "locations": "Halls for borrowed equipment",
+      "locationsHint": "One per line. Students pick one at the kiosk; \"Other\" is always offered.",
+      "locationsSaved": "Halls saved"
     },
     "kiosks": {
       "title": "Kiosks",
@@ -482,7 +498,9 @@
       "loans": "Loans",
       "units": "Units",
       "export": "Export CSV",
-      "totalLoans": "Total loans"
+      "totalLoans": "Total loans",
+      "byLocation": "Loans by hall",
+      "notRecorded": "Not recorded"
     },
     "addEquipment": "Add equipment",
     "adjustStock": "Adjust stock",
@@ -758,6 +776,8 @@
     "version": "Version",
     "notPublished": "The Android app has not been published yet. Use the web app meanwhile.",
     "notifications": "Turn on reminders",
-    "notificationsOn": "Reminders are on"
+    "notificationsOn": "Reminders are on",
+    "usedIn": "Used in {location}",
+    "dobOptional": "Date of birth (if on your school record)"
   }
 }
