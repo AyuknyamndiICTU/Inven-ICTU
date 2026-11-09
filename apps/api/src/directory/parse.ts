@@ -157,6 +157,13 @@ export function cleanName(s: string): string {
   return s.normalize('NFC').replace(/\s+/g, ' ').trim();
 }
 
+/** Short labels from registrar files ("MALE ", "EngLISH", "french") → "Male", "English", "French". */
+export function titleCase(s: string): string {
+  return cleanName(s)
+    .toLocaleLowerCase('fr')
+    .replace(/(^|[\s'’-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toLocaleUpperCase('fr'));
+}
+
 /** "ENOBO NGONDI" → "Enobo Ngondi"; names already in mixed case are kept as written. */
 export function displayName(s: string): string {
   const n = cleanName(s);
@@ -284,7 +291,9 @@ function cellValue(v: ExcelJS.CellValue): Cell {
   if (typeof v === 'object') {
     if ('result' in v) return cellValue((v as ExcelJS.CellFormulaValue).result as ExcelJS.CellValue); // formulas: cached value only
     if ('richText' in v) return (v as ExcelJS.CellRichTextValue).richText.map((r) => r.text).join('');
-    if ('text' in v) return String((v as ExcelJS.CellHyperlinkValue).text);
+    // Hyperlink cells (e.g. mailto: emails): the text may itself be rich text.
+    if ('text' in v) return cellValue((v as ExcelJS.CellHyperlinkValue).text as ExcelJS.CellValue);
+    if ('hyperlink' in v) return String((v as ExcelJS.CellHyperlinkValue).hyperlink).replace(/^mailto:/i, '');
     if ('error' in v) return null;
   }
   return String(v);
@@ -425,7 +434,8 @@ export async function parseTable(buf: Buffer): Promise<Table> {
         throw Errors.badRequest('TOO_MANY_ROWS', `At most ${LIMITS.maxRows} rows are allowed.`);
       const all: Array<{ n: number; cells: Cell[] }> = [];
       ws.eachRow({ includeEmpty: false }, (row, n) => {
-        const cells = (row.values as ExcelJS.CellValue[]).slice(1).map(cellValue);
+        // Array.from fills the holes ExcelJS leaves for blank cells (map would keep them as holes).
+        const cells = Array.from((row.values as ExcelJS.CellValue[]).slice(1), (v) => cellValue(v));
         if (cells.some((v) => v !== null && String(v).trim() !== '')) all.push({ n, cells });
       });
       sheets.push({ name: ws.name.trim(), rows: all });
@@ -618,9 +628,9 @@ export function validateStudents(
       email,
       personalEmail,
       phone: phone as string | null,
-      gender: optional(row, 'gender') ? displayName(optional(row, 'gender')!) : null,
-      nationality: optional(row, 'nationality') ? displayName(optional(row, 'nationality')!) : null,
-      section: optional(row, 'section') ? displayName(optional(row, 'section')!) : null,
+      gender: optional(row, 'gender') ? titleCase(optional(row, 'gender')!) : null,
+      nationality: optional(row, 'nationality') ? titleCase(optional(row, 'nationality')!) : null,
+      section: optional(row, 'section') ? titleCase(optional(row, 'section')!) : null,
       program: optional(row, 'program'),
       level: optional(row, 'level'),
       status: status as StudentRecord['status'],
