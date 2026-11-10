@@ -293,7 +293,7 @@ function cellValue(v: ExcelJS.CellValue): Cell {
     if ('richText' in v) return (v as ExcelJS.CellRichTextValue).richText.map((r) => r.text).join('');
     // Hyperlink cells (e.g. mailto: emails): the text may itself be rich text.
     if ('text' in v) return cellValue((v as ExcelJS.CellHyperlinkValue).text as ExcelJS.CellValue);
-    if ('hyperlink' in v) return String((v as ExcelJS.CellHyperlinkValue).hyperlink).replace(/^mailto:/i, '');
+    if ('hyperlink' in v) return String((v as { hyperlink: unknown }).hyperlink).replace(/^mailto:/i, '');
     if ('error' in v) return null;
   }
   return String(v);
