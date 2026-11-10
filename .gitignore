@@ -64,3 +64,12 @@ apps/mobile/ios/
 !apps/kiosk/build/
 apps/kiosk/build/*
 !apps/kiosk/build/icon.png
+
+# Student data exports (personal data, initial passwords) must never be committed
+*ADMISSIONS*.xlsx
+*ADMISSIONS*.csv
+/*.xlsx
+/*.csv
+
+# Gradle caches
+**/.gradle/
