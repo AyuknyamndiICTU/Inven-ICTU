@@ -1,0 +1,242 @@
+/* Admin surfaces: glass panels, page header, gradient stat cards and colour tones. */
+.lp-tone-cyan {
+  --tone: #f7a23b;
+  --tone-2: #e87d01;
+}
+.lp-tone-violet {
+  --tone: #7b6dff;
+  --tone-2: #2b2390;
+}
+.lp-tone-amber {
+  --tone: #f59e0b;
+  --tone-2: #f97316;
+}
+.lp-tone-rose {
+  --tone: #f43f5e;
+  --tone-2: #ec4899;
+}
+.lp-tone-emerald {
+  --tone: #10b981;
+  --tone-2: #14b8a6;
+}
+
+.lp-glass {
+  position: relative;
+  border-radius: 22px;
+  border: 1px solid var(--glass-line);
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: var(--glass-shadow);
+}
+.lp-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 650 15.5px var(--lp-font-sans);
+  letter-spacing: -0.02em;
+}
+.lp-panel-title__icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  color: var(--lp-chart-a);
+  background: color-mix(in srgb, var(--lp-chart-a) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lp-chart-a) 25%, transparent);
+}
+.lp-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lp-chart-a);
+  text-decoration: none;
+}
+.lp-link:hover {
+  text-decoration: underline;
+}
+
+/* Page header */
+.lp-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 26px;
+}
+.lp-page-head__eyebrow {
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lp-text-muted);
+}
+.lp-page-head__title {
+  font: 700 clamp(28px, 3.4vw, 42px) / 1.05 var(--lp-font-display);
+  letter-spacing: -0.045em;
+  background: linear-gradient(100deg, var(--lp-text) 30%, color-mix(in srgb, var(--lp-chart-a) 80%, var(--lp-text)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lp-page-head__sub {
+  margin-top: 8px;
+  color: var(--lp-text-muted);
+}
+.lp-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Gradient stat cards */
+.lp-stat {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, var(--glass-line));
+  background: linear-gradient(150deg, color-mix(in srgb, var(--tone) 16%, var(--glass)) 0%, var(--glass) 60%);
+  backdrop-filter: blur(20px) saturate(140%);
+  box-shadow:
+    var(--glass-shadow),
+    0 20px 40px -28px var(--tone);
+  transition:
+    box-shadow var(--lp-dur-normal) var(--lp-ease-smooth),
+    border-color var(--lp-dur-normal) var(--lp-ease-smooth);
+}
+.lp-stat:hover {
+  border-color: color-mix(in srgb, var(--tone) 55%, transparent);
+  box-shadow:
+    var(--glass-shadow),
+    0 26px 50px -24px var(--tone);
+}
+.lp-stat__link {
+  display: block;
+  padding: 20px;
+  color: inherit;
+  text-decoration: none;
+}
+.lp-stat__glow {
+  position: absolute;
+  top: -60px;
+  right: -40px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--tone) 35%, transparent), transparent 70%);
+  pointer-events: none;
+}
+.lp-stat__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--tone), var(--tone-2));
+  box-shadow: 0 10px 24px -10px var(--tone);
+}
+.lp-stat__spark {
+  width: 110px;
+  height: 40px;
+  color: var(--tone);
+}
+.lp-stat__label {
+  margin-top: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lp-text-muted);
+}
+.lp-stat__value {
+  display: block;
+  margin-top: 4px;
+  font: 700 38px/1 var(--lp-font-display);
+  letter-spacing: -0.04em;
+}
+.lp-stat__hint {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--lp-text-muted);
+}
+
+.lp-bignum {
+  margin-bottom: 4px;
+  font: 700 30px/1.1 var(--lp-font-display);
+  letter-spacing: -0.04em;
+}
+.lp-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.lp-delta.is-up {
+  color: var(--lp-ok-text);
+  background: color-mix(in srgb, var(--lp-ok) 14%, transparent);
+}
+.lp-delta.is-down {
+  color: var(--lp-out-text);
+  background: color-mix(in srgb, var(--lp-out) 14%, transparent);
+}
+.lp-delta__note {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* Existing kit pieces, restyled for the glass look inside the console. */
+.lp-admin .lp-table-wrap {
+  border-color: var(--glass-line);
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow);
+}
+.lp-admin .lp-table th {
+  background: color-mix(in srgb, var(--lp-text) 3%, transparent);
+  border-bottom-color: var(--glass-line);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+.lp-admin .lp-table td {
+  border-bottom-color: var(--glass-line);
+}
+.lp-admin .lp-tr {
+  transition: background-color var(--lp-dur-fast) var(--lp-ease-smooth);
+}
+.lp-admin .lp-tr:hover td {
+  background: color-mix(in srgb, var(--lp-chart-a) 6%, transparent);
+}
+.lp-admin .lp-chip {
+  border-color: var(--glass-line);
+  background: var(--glass-strong);
+  transition:
+    border-color var(--lp-dur-fast) var(--lp-ease-smooth),
+    transform var(--lp-dur-fast) var(--lp-ease-smooth);
+}
+.lp-admin .lp-chip:hover {
+  border-color: color-mix(in srgb, var(--lp-chart-a) 45%, transparent);
+}
+.lp-admin .lp-chip[aria-pressed='true'] {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(120deg, var(--lp-chart-a), var(--lp-chart-b));
+  box-shadow: 0 8px 20px -10px var(--lp-chart-a);
+}
+.lp-admin .lp-btn--primary {
+  box-shadow: 0 10px 24px -12px #e87d01;
+}
+.lp-admin .lp-btn--secondary,
+.lp-admin .lp-select,
+.lp-admin .lp-field__control,
+.lp-admin .lp-textarea {
+  border-color: var(--glass-line);
+  background-color: var(--glass-strong);
+}
+.lp-admin .lp-kpi {
+  border-color: var(--glass-line);
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+}

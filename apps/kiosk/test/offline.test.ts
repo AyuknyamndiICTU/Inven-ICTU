@@ -128,7 +128,11 @@ describe('Offline mode round trip (S11.5 Verify)', () => {
       await k.settle();
       k.reader.remove();
       expect(k.last()).toMatchObject({ type: 'identify.result', via: 'CARD', result: { status: 'IDENTIFIED' } });
-      await k.service.run('signIn', { idempotencyKey: key(), lines: [{ equipmentId: cable, quantity: 1 }] });
+      await k.service.run('signIn', {
+        idempotencyKey: key(),
+        location: 'Pondi Hall',
+        lines: [{ equipmentId: cable, quantity: 1 }],
+      });
       borrowedCables++;
       tx++;
       await new Promise((r) => setTimeout(r, 1600)); // debounce
@@ -138,7 +142,11 @@ describe('Offline mode round trip (S11.5 Verify)', () => {
       await k.settle();
       k.reader.remove();
       expect(k.last()).toMatchObject({ type: 'identify.result', via: 'HCE', result: { flags: ['OFFLINE'] } });
-      await k.service.run('signIn', { idempotencyKey: key(), lines: [{ equipmentId: router, quantity: 1 }] });
+      await k.service.run('signIn', {
+        idempotencyKey: key(),
+        location: 'Pondi Hall',
+        lines: [{ equipmentId: router, quantity: 1 }],
+      });
       borrowedRouters++;
       tx++;
 
@@ -151,7 +159,11 @@ describe('Offline mode round trip (S11.5 Verify)', () => {
         method: 'ASSISTANT',
         assistantPin: MOCK.assistantPin,
       });
-      await k.service.run('signIn', { idempotencyKey: key(), lines: [{ equipmentId: cable, quantity: 2 }] });
+      await k.service.run('signIn', {
+        idempotencyKey: key(),
+        location: 'Pondi Hall',
+        lines: [{ equipmentId: cable, quantity: 2 }],
+      });
       borrowedCables += 2;
       tx++;
     }
@@ -194,6 +206,7 @@ describe('Offline mode round trip (S11.5 Verify)', () => {
     await expect(
       k.service.run('signIn', {
         idempotencyKey: key(),
+        location: 'Pondi Hall',
         lines: [{ equipmentId: k.backend.equipment[3]!.id, quantity: 1 }],
       }),
     ).rejects.toMatchObject({ info: { code: 'INSUFFICIENT_STOCK' } });

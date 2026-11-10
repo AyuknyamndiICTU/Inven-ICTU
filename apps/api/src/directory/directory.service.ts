@@ -16,6 +16,7 @@ import {
   type Issue,
   missingRequired,
   parseTable,
+  serializeTable,
   type StudentRecord,
   type Table,
   validateCards,
@@ -40,8 +41,12 @@ const snapshot = (s: Student) => ({
   firstName: s.firstName,
   lastName: s.lastName,
   email: s.email,
+  personalEmail: s.personalEmail,
   phone: s.phone,
-  dateOfBirth: s.dateOfBirth.toISOString().slice(0, 10),
+  dateOfBirth: s.dateOfBirth?.toISOString().slice(0, 10) ?? null,
+  gender: s.gender,
+  nationality: s.nationality,
+  section: s.section,
   program: s.program,
   level: s.level,
   status: s.status,
@@ -76,13 +81,9 @@ export class DirectoryService {
     source: 'FILE' | 'REST' = 'FILE',
   ): Promise<DirectoryImportDto> {
     const table = await parseTable(data);
-    const isZip = data.readUInt32LE(0) === 0x04034b50;
-    const storageKey = `imp_${randomUUID()}.${isZip ? 'xlsx' : 'csv'}`;
-    await this.storage.put(
-      storageKey,
-      data,
-      isZip ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv',
-    );
+    // Only the parsed table is kept (sensitive columns such as passwords already removed), never the raw upload.
+    const storageKey = `imp_${randomUUID()}.json`;
+    await this.storage.put(storageKey, Buffer.from(JSON.stringify(serializeTable(table)), 'utf8'), 'application/json');
     const mapping = autoMap(table.headers, kind);
     const plan = await this.plan(kind, table, mapping);
     const imp = await this.prisma.directoryImport.create({
@@ -118,6 +119,7 @@ export class DirectoryService {
     const file = imp.storageKey ? await this.storage.get(imp.storageKey) : null;
     if (!file)
       throw Errors.conflict('IMPORT_FILE_MISSING', 'The uploaded file is no longer available. Upload it again.');
+    if (imp.storageKey?.endsWith('.json')) return JSON.parse(file.data.toString('utf8')) as Table;
     return parseTable(file.data);
   }
 
@@ -147,7 +149,12 @@ export class DirectoryService {
       };
     }
     if (kind === 'STUDENTS') {
-      const { records, issues } = validateStudents(table, mapping, { photoHosts: this.photoHosts() });
+      const {
+        records,
+        issues: blocking,
+        warnings,
+      } = validateStudents(table, mapping, { photoHosts: this.photoHosts() });
+      const issues = [...blocking, ...warnings].sort((a, b) => a.row - b.row);
       const existing = await this.studentsByMatricule(records.map((r) => r.matricule));
       let added = 0;
       let changed = 0;
@@ -164,7 +171,7 @@ export class DirectoryService {
           new: added,
           changed,
           unchanged: records.length - added - changed,
-          invalid: new Set(issues.map((i) => i.row)).size,
+          invalid: new Set(blocking.map((i) => i.row)).size,
           missing: activeTotal - activeInFile,
         },
         issues,
@@ -290,8 +297,12 @@ export class DirectoryService {
       firstName: r.firstName,
       lastName: r.lastName,
       email: r.email,
+      personalEmail: r.personalEmail,
       phone: r.phone,
-      dateOfBirth: new Date(`${r.dateOfBirth}T00:00:00Z`),
+      dateOfBirth: r.dateOfBirth ? new Date(`${r.dateOfBirth}T00:00:00Z`) : null,
+      gender: r.gender,
+      nationality: r.nationality,
+      section: r.section,
       program: r.program,
       level: r.level,
       sourceHash: r.sourceHash,
@@ -433,8 +444,12 @@ export class DirectoryService {
                   firstName: before.firstName,
                   lastName: before.lastName,
                   email: before.email,
+                  personalEmail: before.personalEmail ?? null,
                   phone: before.phone,
-                  dateOfBirth: new Date(`${before.dateOfBirth}T00:00:00Z`),
+                  dateOfBirth: before.dateOfBirth ? new Date(`${before.dateOfBirth}T00:00:00Z`) : null,
+                  gender: before.gender ?? null,
+                  nationality: before.nationality ?? null,
+                  section: before.section ?? null,
                   program: before.program,
                   level: before.level,
                   status: before.status,

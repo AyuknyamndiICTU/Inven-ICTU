@@ -38,6 +38,7 @@ export function kioskConfigOf(s: SettingsT): KioskConfig {
     cardAuthMode: s.cardAuthMode,
     offlineMaxHours: s.offlineMaxHours,
     maxItemsPerStudent: s.maxItemsPerStudent,
+    lendingLocations: s.lendingLocations,
   };
 }
 

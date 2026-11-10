@@ -54,6 +54,8 @@ export const commandSchemas = {
   signIn: z.object({
     /** One key per cart confirmation, reused on retry, so a lost response never borrows twice (ARCH §5 F5). */
     idempotencyKey: Uuid,
+    /** Hall where the equipment will be used. */
+    location: z.string().trim().min(2).max(80),
     lines: z
       .array(z.object({ equipmentId: Uuid, quantity: z.int().min(1).max(500) }))
       .min(1)

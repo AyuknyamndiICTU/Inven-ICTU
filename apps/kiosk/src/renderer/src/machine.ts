@@ -38,6 +38,8 @@ export interface KioskContext {
   link: { requestId: string; verification: 'OTP' | 'REVIEW'; destination: string | null } | null;
   otpDestination: string | null;
   cart: CartLine[];
+  /** Hall where the borrowed equipment will be used (required to borrow). */
+  location: string | null;
   returns: Record<string, ReturnLine>;
   receipt: Receipt | null;
   error: FlowError | null;
@@ -68,6 +70,7 @@ export type KioskMachineEvent =
   | { type: 'ADD_ITEM'; item: Omit<CartLine, 'qty'> }
   | { type: 'SET_QTY'; equipmentId: string; qty: number }
   | { type: 'REMOVE_ITEM'; equipmentId: string }
+  | { type: 'SET_LOCATION'; location: string | null }
   | { type: 'SET_RETURN'; loanLineId: string; qty: number; condition: 'OK' | 'DAMAGED' }
   | { type: 'AVAILABILITY'; equipmentId: string; available: number }
   | { type: 'CONFIRM' }
@@ -76,7 +79,12 @@ export type KioskMachineEvent =
   | { type: 'DONE' };
 
 export type SubmitInput =
-  | { kind: 'BORROW'; idempotencyKey: string; lines: Array<{ equipmentId: string; quantity: number }> }
+  | {
+      kind: 'BORROW';
+      idempotencyKey: string;
+      location: string;
+      lines: Array<{ equipmentId: string; quantity: number }>;
+    }
   | {
       kind: 'RETURN';
       idempotencyKey: string;
@@ -131,6 +139,7 @@ const initialContext = (timing: KioskContext['timing']): KioskContext => ({
   link: null,
   otpDestination: null,
   cart: [],
+  location: null,
   returns: {},
   receipt: null,
   error: null,
@@ -187,6 +196,7 @@ export const kioskMachine = setup({
         unknownCard: null,
         link: null,
         cart: [],
+        location: null,
         returns: {},
         receipt: null,
         error: null,
@@ -202,7 +212,7 @@ export const kioskMachine = setup({
     isUnknownCard: ({ event }) => event.type === 'IDENTIFY_RESULT' && event.result.status === 'UNKNOWN_CARD',
     canBorrow: ({ context }) => Boolean(context.student?.eligibility.canBorrow),
     canReturn: ({ context }) => Boolean(context.student && context.student.openLines.length > 0),
-    hasCart: ({ context }) => context.cart.some((l) => l.qty > 0),
+    hasCart: ({ context }) => context.cart.some((l) => l.qty > 0) && Boolean(context.location),
     hasReturns: ({ context }) => Object.values(context.returns).some((r) => r.qty > 0),
     canRetrySubmit: ({ context }) => context.error?.recovery === 'retry' && context.pending !== null,
   },
@@ -320,6 +330,7 @@ export const kioskMachine = setup({
                 cart: ({ context, event }) => context.cart.filter((l) => l.equipmentId !== event.equipmentId),
               }),
             },
+            SET_LOCATION: { actions: assign({ location: ({ event }) => event.location?.trim() || null }) },
             AVAILABILITY: {
               actions: assign({
                 cart: ({ context, event }) =>
@@ -335,7 +346,7 @@ export const kioskMachine = setup({
               target: 'confirming',
               actions: assign({ pending: { kind: 'BORROW' }, idempotencyKey: () => newKey(), error: null }),
             },
-            BACK: { target: 'identified', actions: assign({ cart: [], notice: null }) },
+            BACK: { target: 'identified', actions: assign({ cart: [], location: null, notice: null }) },
           },
         },
         /** K5: only the student's open lines, with qty and OK/DAMAGED. */
@@ -373,6 +384,7 @@ export const kioskMachine = setup({
                 : {
                     kind: 'BORROW',
                     idempotencyKey: context.idempotencyKey!,
+                    location: context.location!,
                     lines: context.cart
                       .filter((l) => l.qty > 0)
                       .map((l) => ({ equipmentId: l.equipmentId, quantity: l.qty })),

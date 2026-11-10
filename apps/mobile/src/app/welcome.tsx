@@ -7,6 +7,7 @@ import { errorMessage } from '../lib/api';
 import { installMode } from '../lib/app-logic';
 import { useApp } from '../lib/app-context';
 import { assertionToJson, requestOptionsFromJson } from '../lib/webauthn';
+import { CrestOrbit } from '../components/crest-orbit';
 
 type InstallEvent = Event & { prompt(): Promise<void> };
 
@@ -56,6 +57,7 @@ export default function Welcome() {
   const cards = [t('mobile.onboard1'), t('mobile.onboard2'), t('mobile.onboard3')];
   return (
     <Screen>
+      <CrestOrbit size={150} />
       <View style={s.hero}>
         {cards.map((c, i) => (
           <View

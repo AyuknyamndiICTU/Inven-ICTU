@@ -27,6 +27,7 @@ export default function Loans() {
             <Capsule tone={l.overdue ? 'out' : 'signal'}>
               {l.overdue ? t('mobile.overdue') : t('mobile.due', { time: dueText(l.dueAt, locale) })}
             </Capsule>
+            {l.location && <Body muted>{t('mobile.usedIn', { location: l.location })}</Body>}
             {l.lines.map((ln) => (
               <Body key={ln.equipmentName}>
                 {ln.equipmentName} ×{ln.outstanding}

@@ -532,15 +532,15 @@ export class KioskService {
 
     challenge: async () => (this.offlineMode() ? this.d.offline!.challengeQr() : this.pool.displayed()),
 
-    signIn: async ({ idempotencyKey, lines }) => {
+    signIn: async ({ idempotencyKey, lines, location }) => {
       if (this.offlineMode()) {
-        const receipt = this.d.offline!.signIn(lines);
+        const receipt = this.d.offline!.signIn(lines, location);
         this.d.log.info('lending.signIn', `${lines.length} OFFLINE`);
         this.publishStatus();
         return receipt;
       }
       const session = this.requireSession();
-      const receipt = await this.api.call('kiosk.signIn', { body: { session, lines }, idempotencyKey });
+      const receipt = await this.api.call('kiosk.signIn', { body: { session, lines, location }, idempotencyKey });
       this.d.log.info('lending.signIn', String(lines.length));
       this.clearSession(session);
       return receipt;

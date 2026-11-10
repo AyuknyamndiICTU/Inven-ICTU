@@ -2,6 +2,9 @@
 @import '@labpass/design-tokens/tokens.css';
 @import '@labpass/design-tokens/theme.css';
 @import '@labpass/ui/styles.css';
+@import './admin-shell.css';
+@import './admin-surfaces.css';
+@import './admin-charts.css';
 
 @layer base {
   html {
@@ -39,8 +42,9 @@
   top: 12px;
 }
 .lp-brand-mark {
-  width: 22px;
-  height: 22px;
+  flex: none;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #2e333d, #07080a 70%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
@@ -49,32 +53,13 @@
 .lp-brand-mark::after {
   content: '';
   position: absolute;
-  left: 4px;
-  right: 4px;
-  top: 10px;
+  left: 7px;
+  right: 7px;
+  top: 16px;
   height: 2px;
   border-radius: 2px;
   background: var(--lp-signal-300);
   box-shadow: 0 0 8px var(--lp-signal-500);
-}
-.lp-subnav {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  color: var(--lp-text-muted);
-  font-weight: 600;
-  text-decoration: none;
-}
-.lp-subnav:hover {
-  color: var(--lp-text);
-  background: var(--lp-surface-sunken);
-}
-.lp-subnav.is-active {
-  color: var(--lp-text);
-  box-shadow: inset 0 0 0 1px var(--lp-line);
-  background: var(--lp-surface-raised);
 }
 .lp-select {
   min-height: 44px;

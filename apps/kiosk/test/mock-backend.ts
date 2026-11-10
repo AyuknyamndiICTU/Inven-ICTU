@@ -444,6 +444,7 @@ export class MockBackend {
         occurredAt: new Date().toISOString(),
         dueAt,
         studentFirstName: student.firstName,
+        location: typeof b.location === 'string' ? b.location : null,
         lines: lines.map((l) => ({
           equipmentId: l.equipmentId,
           equipmentName: this.equipment.find((x) => x.id === l.equipmentId)!.name,
@@ -485,6 +486,7 @@ export class MockBackend {
         occurredAt: new Date().toISOString(),
         dueAt: null,
         studentFirstName: student.firstName,
+        location: null,
         lines: out,
         offline: false,
       },

@@ -1,8 +1,12 @@
 import { z } from 'zod';
 import { IdentifyMethod, IsoDateTime, ManualVerification, PageQuery, Uuid } from '../common';
 
+/** Where the borrowed equipment will be used: a hall from `settings.lendingLocations` or free text ("Other"). */
+export const LoanLocation = z.string().trim().min(2).max(80);
+
 export const SignInBody = z.object({
   session: z.string().min(10),
+  location: LoanLocation.optional(),
   lines: z
     .array(z.object({ equipmentId: Uuid, quantity: z.int().min(1).max(500) }))
     .min(1)
@@ -27,6 +31,7 @@ export const Receipt = z
     occurredAt: IsoDateTime,
     dueAt: IsoDateTime.nullable(),
     studentFirstName: z.string(),
+    location: z.string().nullable().default(null),
     lines: z.array(
       z.object({
         equipmentId: Uuid,
@@ -64,6 +69,7 @@ export const Loan = z
     openedAt: IsoDateTime,
     dueAt: IsoDateTime,
     closedAt: IsoDateTime.nullable(),
+    location: z.string().nullable(),
     status: z.enum(['OPEN', 'CLOSED']),
     overdue: z.boolean(),
     lines: z.array(LoanLine),
@@ -75,6 +81,7 @@ export const LoanListQuery = PageQuery.extend({
   status: z.enum(['OPEN', 'CLOSED', 'OVERDUE']).optional(),
   studentId: Uuid.optional(),
   equipmentId: Uuid.optional(),
+  location: z.string().trim().max(80).optional(),
   search: z.string().trim().max(80).optional(),
 });
 
@@ -96,5 +103,6 @@ export const MyLoan = z.object({
   openedAt: IsoDateTime,
   dueAt: IsoDateTime,
   overdue: z.boolean(),
+  location: z.string().nullable(),
   lines: z.array(z.object({ equipmentName: z.string(), outstanding: z.int() })),
 });

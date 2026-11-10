@@ -170,6 +170,10 @@ describe('app logic', () => {
       lastName: 'required',
       dateOfBirth: 'invalid',
     });
+    // Admissions records have no date of birth, so it may be left empty.
+    expect(
+      validateEnroll({ matricule: 'ICTU20261172', firstName: 'Stella', lastName: 'Enobo', dateOfBirth: '' }),
+    ).toEqual({});
   });
 
   it('chooses the install experience', () => {

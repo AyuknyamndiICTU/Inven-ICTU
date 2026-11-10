@@ -145,8 +145,12 @@ test('card → borrow 2 items → success → attract', async () => {
   await search.fill('2960');
   await page.getByRole('option', { name: /Catalyst 2960 Switch/ }).click();
   await shot('k4-borrow');
+  // Borrowing is blocked until a hall is chosen.
+  await expect(page.getByRole('button', { name: 'Borrow 2 item(s)' })).toBeDisabled();
+  await page.getByLabel('Where will you use it?').selectOption('Chumbow Hall');
   await page.getByRole('button', { name: 'Borrow 2 item(s)' }).click();
   await expect(page.getByRole('heading', { name: /Borrowed\. Please return by/ })).toBeVisible();
+  await expect(page.getByText('For Chumbow Hall')).toBeVisible();
   await shot('k6-success');
   expect(backend.equipment[0]!.available).toBe(5);
   expect(backend.equipment[2]!.available).toBe(8);
@@ -223,6 +227,7 @@ test('409: someone took the last unit → back to the cart with the real availab
   await page.getByPlaceholder('Search by name or code…').fill('4321');
   await page.getByRole('option', { name: /Cisco ISR 4321/ }).click();
   backend.equipment[1]!.available = 0; // another kiosk borrowed it; no socket event yet
+  await page.getByLabel('Where will you use it?').selectOption('IT Hall');
   await page.getByRole('button', { name: 'Borrow 1 item(s)' }).click();
   await expect(page.getByRole('alert')).toContainText('Only 0 × Cisco ISR 4321 left.');
   await expect(page.getByText('Pick equipment from the list to add it here.')).toBeVisible();

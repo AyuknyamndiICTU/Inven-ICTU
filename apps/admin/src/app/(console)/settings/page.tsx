@@ -16,8 +16,12 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const { can } = useSession();
   const toast = useToast();
   const [s, setS] = useState<Settings>(initial);
+  const [locationsText, setLocationsText] = useState(initial.lendingLocations.join('\n'));
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => setS(initial), [initial]);
+  useEffect(() => {
+    setS(initial);
+    setLocationsText(initial.lendingLocations.join('\n'));
+  }, [initial]);
   const save = useApiMutation('settings.update', {
     invalidates: ['settings.get'],
     onSuccess: () => toast.show({ title: t('admin.ui.saved'), tone: 'success' }),
@@ -209,6 +213,28 @@ function SettingsForm({ initial }: { initial: Settings }) {
             />
             {!superAdmin && <p className="text-xs text-text-muted">{t('admin.settings.superOnly')}</p>}
           </div>
+        </Panel>
+        <Panel title={t('admin.settings.locations')} className="lg:col-span-2">
+          <label className="grid gap-2 text-sm">
+            <span className="text-text-muted">{t('admin.settings.locationsHint')}</span>
+            <textarea
+              className="lp-textarea min-h-56 font-mono"
+              aria-label={t('admin.settings.locations')}
+              value={locationsText}
+              onChange={(e) => {
+                setLocationsText(e.target.value);
+                const list = [
+                  ...new Set(
+                    e.target.value
+                      .split('\n')
+                      .map((x) => x.trim())
+                      .filter((x) => x.length >= 2),
+                  ),
+                ];
+                if (list.length) up('lendingLocations', list);
+              }}
+            />
+          </label>
         </Panel>
       </fieldset>
       {editable && (

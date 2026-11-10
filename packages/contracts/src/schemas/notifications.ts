@@ -97,6 +97,8 @@ export const UsageReport = z.object({
   byItem: z.array(z.object({ equipmentId: Uuid, name: z.string(), loans: z.int(), quantity: z.int() })),
   byDay: z.array(z.object({ date: IsoDate, loans: z.int() })),
   byHour: z.array(z.object({ hour: z.int(), loans: z.int() })),
+  /** Loans per hall ("Not recorded" for loans made before locations existed). */
+  byLocation: z.array(z.object({ location: z.string(), loans: z.int(), quantity: z.int() })).default([]),
   uniqueStudents: z.int(),
 });
 

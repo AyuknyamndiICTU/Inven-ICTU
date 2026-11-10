@@ -12,7 +12,7 @@ import {
 } from '@simplewebauthn/server';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { API_ENV, type ApiEnv } from '../config/env';
-import { normalizeName } from '../directory/parse';
+import { namesMatch } from '../directory/parse';
 import { StudentTokensService } from '../platform/auth/student-tokens.service';
 import { randomToken, sha256Hex, safeEqual } from '../platform/crypto/crypto';
 import { Errors } from '../platform/http/problem';
@@ -62,7 +62,7 @@ export class EnrollmentService {
   ) {}
 
   async start(
-    body: { matricule: string; firstName: string; lastName: string; dateOfBirth: string; platform: string },
+    body: { matricule: string; firstName: string; lastName: string; dateOfBirth?: string; platform: string },
     locale: 'en' | 'fr',
   ) {
     const matricule = body.matricule.trim().toUpperCase();
@@ -74,9 +74,10 @@ export class EnrollmentService {
       );
     const match = {
       matricule: true,
-      firstName: normalizeName(student.firstName) === normalizeName(body.firstName),
-      lastName: normalizeName(student.lastName) === normalizeName(body.lastName),
-      dateOfBirth: student.dateOfBirth.toISOString().slice(0, 10) === body.dateOfBirth,
+      ...namesMatch(student, body),
+      // Records without a date of birth (admissions lists) are matched on matricule + names; the OTP to the
+      // school contact on record remains the proof of identity.
+      dateOfBirth: student.dateOfBirth ? student.dateOfBirth.toISOString().slice(0, 10) === body.dateOfBirth : true,
       hasContact: Boolean(student.email || student.phone),
       studentActive: student.status === 'ACTIVE',
     };

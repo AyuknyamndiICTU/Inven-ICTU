@@ -1,3 +1,5 @@
+// NOTE (ICTU branding): public/icons/* are now rendered from assets/brand/ictu-shield.png (crest on a navy
+// gradient). Running this script restores the old placeholder icons; do not run it unless the brand changes.
 // Generates the PWA / app icons from the design tokens with no image dependencies (pure PNG encoder):
 // an ink square with a Signal-cyan "reader eye" ring and slit. Run: node scripts/icons.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';

@@ -101,7 +101,7 @@ describe('SIS REST connector & scheduled sync (S05 task 3)', () => {
     expect(first).toMatchObject({ status: 'COMMITTED', counts: { new: 3 } });
     expect(await t.prisma.student.count()).toBe(3);
     expect(
-      (await t.prisma.student.findUniqueOrThrow({ where: { matricule: 'ICTU20240102' } })).dateOfBirth.toISOString(),
+      (await t.prisma.student.findUniqueOrThrow({ where: { matricule: 'ICTU20240102' } })).dateOfBirth?.toISOString(),
     ).toMatch(/^2003-01-02/);
 
     // Nothing changed: no new import is committed.

@@ -11,6 +11,8 @@ export type Cell = string | number | Date | null;
 export interface Table {
   headers: string[];
   rows: Cell[][];
+  /** Where each row came from in a multi-sheet workbook, e.g. "SEN, row 12" (used in issue messages). */
+  origins?: string[];
 }
 export interface Issue {
   row: number;
@@ -31,10 +33,16 @@ export const STUDENT_FIELDS = [
   'status',
   'card_uid',
   'photo_url',
+  'full_name',
+  'personal_email',
+  'gender',
+  'nationality',
+  'section',
 ] as const;
 export const CARD_FIELDS = ['card_uid', 'matricule', 'batch_id', 'printed_at'] as const;
 export const REQUIRED: Record<ImportKind, string[]> = {
-  STUDENTS: ['matricule', 'first_name', 'last_name', 'date_of_birth'],
+  /** Names: first_name + last_name, or one full_name column (see missingRequired). Date of birth is optional. */
+  STUDENTS: ['matricule', 'first_name', 'last_name'],
   CARD_BATCH: ['card_uid', 'matricule'],
 };
 
@@ -62,9 +70,51 @@ const ALIASES: Record<string, string[]> = {
     'ne_le',
     'nee_le',
   ],
-  email: ['email', 'e_mail', 'mail', 'courriel', 'adresse_email', 'adresse_mail'],
+  email: [
+    'ict_u_email',
+    'ictu_email',
+    'school_email',
+    'institutional_email',
+    'official_email',
+    'email_ictu',
+    'email',
+    'e_mail',
+    'mail',
+    'courriel',
+    'adresse_email',
+    'adresse_mail',
+  ],
+  /** A second "Email" column (after the school one) is the student's personal address. */
+  personal_email: ['personal_email', 'email_personnel', 'private_email', 'other_email', 'email', 'e_mail'],
+  full_name: [
+    'name',
+    'names',
+    'full_name',
+    'fullname',
+    'student_name',
+    'nom_complet',
+    'nom_et_prenom',
+    'nom_et_prenoms',
+    'noms_et_prenoms',
+    'noms_prenoms',
+  ],
+  gender: ['gender', 'sex', 'sexe', 'genre'],
+  nationality: ['nationality', 'nationalite', 'citizenship'],
+  section: ['section', 'language', 'langue', 'stream', 'sub_system', 'subsystem', 'sous_systeme'],
   phone: ['phone', 'telephone', 'tel', 'mobile', 'numero_de_telephone', 'phone_number', 'portable'],
-  program: ['program', 'programme', 'filiere', 'department', 'departement', 'field', 'specialite'],
+  program: [
+    'program',
+    'programme',
+    'filiere',
+    'department',
+    'departement',
+    'field',
+    'specialite',
+    'course',
+    'major',
+    'specialty',
+    'speciality',
+  ],
   level: ['level', 'niveau', 'year', 'annee', 'classe'],
   status: ['status', 'statut', 'etat'],
   card_uid: ['card_uid', 'uid', 'card', 'carte', 'nfc_uid', 'uid_carte'],
@@ -82,6 +132,10 @@ export function normalizeHeader(h: string): string {
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_|_$/g, '');
 }
+
+/** Columns that must never be stored or shown (registrar exports sometimes include initial passwords). */
+const SENSITIVE_HEADER = /(^|_)(password|passwd|pwd|mot_de_passe|mdp|pin|secret|otp|code_pin)(_|$)/;
+export const isSensitiveHeader = (h: string) => SENSITIVE_HEADER.test(normalizeHeader(h));
 
 export function autoMap(headers: string[], kind: ImportKind): Record<string, string | null> {
   const fields: readonly string[] = kind === 'STUDENTS' ? STUDENT_FIELDS : CARD_FIELDS;
@@ -103,9 +157,51 @@ export function cleanName(s: string): string {
   return s.normalize('NFC').replace(/\s+/g, ' ').trim();
 }
 
+/** Short labels from registrar files ("MALE ", "EngLISH", "french") → "Male", "English", "French". */
+export function titleCase(s: string): string {
+  return cleanName(s)
+    .toLocaleLowerCase('fr')
+    .replace(/(^|[\s'’-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toLocaleUpperCase('fr'));
+}
+
+/** "ENOBO NGONDI" → "Enobo Ngondi"; names already in mixed case are kept as written. */
+export function displayName(s: string): string {
+  const n = cleanName(s);
+  if (n !== n.toLocaleUpperCase('fr')) return n;
+  return n
+    .toLocaleLowerCase('fr')
+    .replace(/(^|[\s'’-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toLocaleUpperCase('fr'));
+}
+
+/**
+ * One "NAME" column, written family name first (ICTU registrar convention, e.g. "ENOBO NGONDI EMMANUELLE STELLA"):
+ * the first word becomes the last name and the rest the first name(s). Enrolment matching ignores the split.
+ */
+export function splitFullName(full: string): { firstName: string; lastName: string } {
+  const words = displayName(full).split(' ').filter(Boolean);
+  if (words.length <= 1) return { firstName: words[0] ?? '', lastName: words[0] ?? '' };
+  return { lastName: words[0]!, firstName: words.slice(1).join(' ') };
+}
+
 /** Matching form (ARCH §5 F7): trim, collapse whitespace, NFC, case-fold. Accents remain significant. */
 export function normalizeName(s: string): string {
   return cleanName(s).toLocaleLowerCase('fr');
+}
+
+/**
+ * Name match for enrolment (ARCH §5 F7). Exact first/last match, or — for registrar files that only carry one
+ * full-name column, split heuristically on import — the same set of name words in any order across both fields.
+ */
+export function namesMatch(
+  record: { firstName: string; lastName: string },
+  submitted: { firstName: string; lastName: string },
+): { firstName: boolean; lastName: boolean } {
+  const first = normalizeName(record.firstName) === normalizeName(submitted.firstName);
+  const last = normalizeName(record.lastName) === normalizeName(submitted.lastName);
+  if (first && last) return { firstName: true, lastName: true };
+  const words = (a: string, b: string) => normalizeName(`${a} ${b}`).split(' ').filter(Boolean).sort().join(' ');
+  const same = words(record.firstName, record.lastName) === words(submitted.firstName, submitted.lastName);
+  return same ? { firstName: true, lastName: true } : { firstName: first, lastName: last };
 }
 
 export function normalizeMatricule(s: string): string {
@@ -195,10 +291,114 @@ function cellValue(v: ExcelJS.CellValue): Cell {
   if (typeof v === 'object') {
     if ('result' in v) return cellValue((v as ExcelJS.CellFormulaValue).result as ExcelJS.CellValue); // formulas: cached value only
     if ('richText' in v) return (v as ExcelJS.CellRichTextValue).richText.map((r) => r.text).join('');
-    if ('text' in v) return String((v as ExcelJS.CellHyperlinkValue).text);
+    // Hyperlink cells (e.g. mailto: emails): the text may itself be rich text.
+    if ('text' in v) return cellValue((v as ExcelJS.CellHyperlinkValue).text as ExcelJS.CellValue);
+    if ('hyperlink' in v) return String((v as { hyperlink: unknown }).hyperlink).replace(/^mailto:/i, '');
     if ('error' in v) return null;
   }
   return String(v);
+}
+
+interface Sheet {
+  name: string;
+  rows: Array<{ n: number; cells: Cell[] }>;
+}
+
+const KNOWN_HEADERS = new Set(Object.values(ALIASES).flat());
+const headerScore = (cells: Cell[]) =>
+  cells.filter((v) => typeof v === 'string' && KNOWN_HEADERS.has(normalizeHeader(v))).length;
+
+/**
+ * One table from a workbook. A single sheet is read as-is (first row = headers). When several sheets share a
+ * recognisable header row — e.g. an admissions list with one sheet per programme — all of them are combined,
+ * columns are aligned by header name (a blank header takes the name of the same column in the first sheet), and a
+ * "Programme" column is filled with the sheet name if the sheets have none.
+ */
+function mergeSheets(sheets: Sheet[]): Table {
+  const located = sheets
+    .map((s) => {
+      const top = s.rows.slice(0, 5);
+      const best = top.reduce((b, r, i) => (headerScore(r.cells) > headerScore(top[b]?.cells ?? []) ? i : b), 0);
+      return { ...s, headerAt: best, score: headerScore(top[best]?.cells ?? []) };
+    })
+    .filter((s) => s.rows.length > 0);
+  const tabular = located.filter((s) => s.score >= 2);
+  if (tabular.length <= 1) {
+    const s = tabular[0] ?? located[0];
+    if (!s) throw Errors.badRequest('EMPTY_FILE', 'The file has no header row.');
+    const [head, ...rows] = s.rows.slice(tabular[0] ? s.headerAt : 0);
+    return dropSensitive(
+      checkShape({
+        headers: (head?.cells ?? []).map((h) => (h === null ? '' : String(h).trim())),
+        rows: rows.map((r) => r.cells),
+      }),
+    );
+  }
+  const headers: string[] = [];
+  const norm: string[] = [];
+  const rows: Cell[][] = [];
+  const origins: string[] = [];
+  const first = tabular[0]!;
+  const firstHead = first.rows[first.headerAt]!.cells.map((h) => (h === null ? '' : String(h).trim()));
+  for (const s of tabular) {
+    const head = s.rows[s.headerAt]!.cells.map((h) => (h === null ? '' : String(h).trim()));
+    // Column offset against the first sheet, from the first header name both sheets share.
+    const firstNorm = firstHead.map(normalizeHeader);
+    const anchor = head.findIndex((h) => h !== '' && firstNorm.includes(normalizeHeader(h)));
+    const offset = anchor < 0 ? 0 : firstNorm.indexOf(normalizeHeader(head[anchor]!)) - anchor;
+    const target = head.map((h, i) => {
+      let name = h;
+      if (!name) {
+        const twin = firstHead[i + offset];
+        if (twin && !head.some((x) => normalizeHeader(x) === normalizeHeader(twin))) name = twin;
+      }
+      if (!name) return -1;
+      const k = normalizeHeader(name);
+      let at = norm.indexOf(k);
+      if (at < 0) {
+        headers.push(name);
+        norm.push(k);
+        at = headers.length - 1;
+      }
+      return at;
+    });
+    for (const r of s.rows.slice(s.headerAt + 1)) {
+      const out: Cell[] = [];
+      r.cells.forEach((v, i) => {
+        const at = target[i];
+        if (at !== undefined && at >= 0) out[at] = v;
+      });
+      rows.push(out);
+      origins.push(`${s.name}, row ${r.n}`);
+    }
+  }
+  const hasProgram = norm.some((k) => ALIASES.program!.includes(k));
+  if (!hasProgram) {
+    headers.push('Programme');
+    let i = 0;
+    for (const s of tabular) for (const _ of s.rows.slice(s.headerAt + 1)) rows[i++]![headers.length - 1] = s.name;
+  }
+  const width = headers.length;
+  const table = { headers, rows: rows.map((r) => Array.from({ length: width }, (_, i) => r[i] ?? null)), origins };
+  return dropSensitive(checkShape(table));
+}
+
+/** JSON-safe copy for storage: Date cells become yyyy-mm-dd (what parseDate accepts). */
+export function serializeTable(t: Table): Table {
+  const cell = (v: Cell): Cell =>
+    v instanceof Date ? (Number.isNaN(v.getTime()) ? null : v.toISOString().slice(0, 10)) : v;
+  return { ...t, rows: t.rows.map((r) => r.map(cell)) };
+}
+
+/** Removes password/PIN/secret columns so they are never stored, previewed or imported. */
+function dropSensitive(table: Table): Table {
+  const keep = table.headers.map((h) => !isSensitiveHeader(h));
+  if (keep.every(Boolean)) return table;
+  return {
+    headers: table.headers.filter((_, i) => keep[i]),
+    rows: table.rows.map((r) => r.filter((_, i) => keep[i])),
+    ...(table.origins ? { origins: table.origins } : {}),
+  };
 }
 
 function checkShape(table: Table): Table {
@@ -227,17 +427,20 @@ export async function parseTable(buf: Buffer): Promise<Table> {
     } catch {
       throw Errors.badRequest('INVALID_FILE', 'The file is not a readable XLSX workbook.');
     }
-    const ws = wb.worksheets[0];
-    if (!ws) throw Errors.badRequest('EMPTY_FILE', 'The workbook has no sheet.');
-    if (ws.rowCount > LIMITS.maxRows + 1)
-      throw Errors.badRequest('TOO_MANY_ROWS', `At most ${LIMITS.maxRows} rows are allowed.`);
-    const all: Cell[][] = [];
-    ws.eachRow({ includeEmpty: false }, (row) => {
-      const values = (row.values as ExcelJS.CellValue[]).slice(1).map(cellValue);
-      all.push(values);
-    });
-    const [head = [], ...rows] = all;
-    return checkShape({ headers: head.map((h) => (h === null ? '' : String(h).trim())), rows });
+    if (!wb.worksheets.length) throw Errors.badRequest('EMPTY_FILE', 'The workbook has no sheet.');
+    const sheets: Sheet[] = [];
+    for (const ws of wb.worksheets) {
+      if (ws.rowCount > LIMITS.maxRows + 1)
+        throw Errors.badRequest('TOO_MANY_ROWS', `At most ${LIMITS.maxRows} rows are allowed.`);
+      const all: Array<{ n: number; cells: Cell[] }> = [];
+      ws.eachRow({ includeEmpty: false }, (row, n) => {
+        // Array.from fills the holes ExcelJS leaves for blank cells (map would keep them as holes).
+        const cells = Array.from((row.values as ExcelJS.CellValue[]).slice(1), (v) => cellValue(v));
+        if (cells.some((v) => v !== null && String(v).trim() !== '')) all.push({ n, cells });
+      });
+      sheets.push({ name: ws.name.trim(), rows: all });
+    }
+    return mergeSheets(sheets);
   }
   const text = decodeText(buf);
   const firstLine = text.split(/\r?\n/, 1)[0] ?? '';
@@ -247,10 +450,12 @@ export async function parseTable(buf: Buffer): Promise<Table> {
   );
   const parsed = Papa.parse<string[]>(text, { delimiter, skipEmptyLines: 'greedy' });
   const [head = [], ...rows] = parsed.data;
-  return checkShape({
-    headers: head.map((h) => String(h).trim()),
-    rows: rows.map((r) => r.map((c) => (c === '' ? null : c))),
-  });
+  return dropSensitive(
+    checkShape({
+      headers: head.map((h) => String(h).trim()),
+      rows: rows.map((r) => r.map((c) => (c === '' ? null : c))),
+    }),
+  );
 }
 
 // ───────────── Row validation ─────────────
@@ -260,9 +465,13 @@ export interface StudentRecord {
   matricule: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
+  dateOfBirth: string | null;
   email: string | null;
+  personalEmail: string | null;
   phone: string | null;
+  gender: string | null;
+  nationality: string | null;
+  section: string | null;
   program: string | null;
   level: string | null;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | null;
@@ -289,24 +498,29 @@ function columnIndex(table: Table, mapping: Record<string, string | null>) {
 
 export function missingRequired(kind: ImportKind, mapping: Record<string, string | null>): string[] {
   const mapped = new Set(Object.values(mapping).filter(Boolean));
-  return REQUIRED[kind].filter((f) => !mapped.has(f));
+  const required =
+    kind === 'STUDENTS' && mapped.has('full_name')
+      ? REQUIRED.STUDENTS.filter((f) => f !== 'first_name' && f !== 'last_name')
+      : REQUIRED[kind];
+  return required.filter((f) => !mapped.has(f));
 }
 
 export function studentHash(r: Omit<StudentRecord, 'row' | 'sourceHash' | 'cardUid' | 'photoUrl'>): string {
+  const base: unknown[] = [
+    r.matricule,
+    r.firstName,
+    r.lastName,
+    r.dateOfBirth,
+    r.email,
+    r.phone,
+    r.program,
+    r.level,
+    r.status,
+  ];
+  // Extra registrar fields only enter the hash when present, so files without them keep their earlier hashes.
+  const extra = [r.personalEmail, r.gender, r.nationality, r.section];
   return createHash('sha256')
-    .update(
-      JSON.stringify([
-        r.matricule,
-        r.firstName,
-        r.lastName,
-        r.dateOfBirth,
-        r.email,
-        r.phone,
-        r.program,
-        r.level,
-        r.status,
-      ]),
-    )
+    .update(JSON.stringify(extra.some((v) => v !== null) ? [...base, ...extra] : base))
     .digest('hex');
 }
 
@@ -314,9 +528,10 @@ export function validateStudents(
   table: Table,
   mapping: Record<string, string | null>,
   opts: { photoHosts: string[] } = { photoHosts: [] },
-): { records: StudentRecord[]; issues: Issue[] } {
+): { records: StudentRecord[]; issues: Issue[]; warnings: Issue[] } {
   const idx = columnIndex(table, mapping);
   const issues: Issue[] = [];
+  const warnings: Issue[] = [];
   const records: StudentRecord[] = [];
   const seen = new Set<string>();
   const text = (row: Cell[], f: string): string | null => {
@@ -327,10 +542,16 @@ export function validateStudents(
     const s = v instanceof Date ? v.toISOString() : String(v).trim();
     return s === '' ? null : s;
   };
+  const optional = (row: Cell[], f: string) => {
+    const v = text(row, f);
+    return v ? cleanName(v) : null;
+  };
   table.rows.forEach((row, n) => {
     const rowNo = n + 2; // 1-based + header row
+    const where = table.origins?.[n] ? `${table.origins[n]}: ` : '';
     const errs: Issue[] = [];
-    const add = (field: string | null, message: string) => errs.push({ row: rowNo, field, message });
+    const add = (field: string | null, message: string) => errs.push({ row: rowNo, field, message: where + message });
+    const warn = (field: string, message: string) => warnings.push({ row: rowNo, field, message: where + message });
     for (const i of Object.values(idx)) {
       const v = row[i];
       if (typeof v === 'string' && v.length > LIMITS.maxCell)
@@ -341,21 +562,44 @@ export function validateStudents(
     if (!matricule) add('matricule', 'Matricule is required');
     else if (!/^[A-Z0-9/-]{3,32}$/.test(matricule)) add('matricule', 'Matricule has invalid characters');
     else if (seen.has(matricule)) add('matricule', 'Duplicate matricule in this file');
-    const firstName = cleanName(text(row, 'first_name') ?? '');
-    const lastName = cleanName(text(row, 'last_name') ?? '');
-    if (!firstName) add('first_name', 'First name is required');
-    if (!lastName) add('last_name', 'Last name is required');
+    let firstName = displayName(text(row, 'first_name') ?? '');
+    let lastName = displayName(text(row, 'last_name') ?? '');
+    const full = text(row, 'full_name');
+    if ((!firstName || !lastName) && full) {
+      const split = splitFullName(full);
+      firstName ||= split.firstName;
+      lastName ||= split.lastName;
+    }
+    if (!firstName) add(idx.full_name !== undefined ? 'full_name' : 'first_name', 'First name is required');
+    if (!lastName) add(idx.full_name !== undefined ? 'full_name' : 'last_name', 'Last name is required');
     const dobCell = idx.date_of_birth !== undefined ? (row[idx.date_of_birth] ?? null) : null;
-    const dateOfBirth = parseDate(typeof dobCell === 'string' ? dobCell.trim() : dobCell);
+    const hasDob = dobCell !== null && String(dobCell).trim() !== '';
+    const dateOfBirth = hasDob ? parseDate(typeof dobCell === 'string' ? dobCell.trim() : dobCell) : null;
     const year = dateOfBirth ? Number(dateOfBirth.slice(0, 4)) : 0;
-    if (!dateOfBirth) add('date_of_birth', 'Date of birth is missing or not a date (use dd/mm/yyyy)');
-    else if (year < 1940 || year > new Date().getUTCFullYear() - 10)
+    if (hasDob && !dateOfBirth) add('date_of_birth', 'Date of birth is not a date (use dd/mm/yyyy)');
+    else if (dateOfBirth && (year < 1940 || year > new Date().getUTCFullYear() - 10))
       add('date_of_birth', 'Date of birth is not plausible');
-    const emailRaw = text(row, 'email');
-    const email = emailRaw ? emailRaw.toLowerCase() : null;
-    if (email && !EMAIL_RE.test(email)) add('email', 'Email is not valid');
-    const phone = normalizePhone(text(row, 'phone'));
-    if (phone === 'INVALID') add('phone', 'Phone number is not valid');
+    // Contact problems never block a student: the field is left empty and reported.
+    const mail = (f: string) => {
+      const raw = text(row, f);
+      if (!raw) return null;
+      const v = raw.toLowerCase().replace(/\s+/g, '');
+      if (EMAIL_RE.test(v)) return v;
+      warn(f, `Email "${raw}" is not valid — imported without it`);
+      return null;
+    };
+    let email = mail('email');
+    let personalEmail = mail('personal_email');
+    if (!email && personalEmail) {
+      email = personalEmail;
+      personalEmail = null;
+    }
+    if (personalEmail === email) personalEmail = null;
+    let phone = normalizePhone(text(row, 'phone'));
+    if (phone === 'INVALID') {
+      warn('phone', `Phone number "${text(row, 'phone')}" is not valid — imported without it`);
+      phone = null;
+    }
     const status = parseStatus(text(row, 'status'));
     if (status === 'INVALID') add('status', 'Status must be active, inactive or suspended');
     const cardUid = normalizeUid(text(row, 'card_uid'));
@@ -380,16 +624,20 @@ export function validateStudents(
       matricule,
       firstName,
       lastName,
-      dateOfBirth: dateOfBirth!,
+      dateOfBirth,
       email,
+      personalEmail,
       phone: phone as string | null,
-      program: text(row, 'program') ? cleanName(text(row, 'program')!) : null,
-      level: text(row, 'level') ? cleanName(text(row, 'level')!) : null,
+      gender: optional(row, 'gender') ? titleCase(optional(row, 'gender')!) : null,
+      nationality: optional(row, 'nationality') ? titleCase(optional(row, 'nationality')!) : null,
+      section: optional(row, 'section') ? titleCase(optional(row, 'section')!) : null,
+      program: optional(row, 'program'),
+      level: optional(row, 'level'),
       status: status as StudentRecord['status'],
     };
     records.push({ row: rowNo, ...base, cardUid: cardUid as string | null, photoUrl, sourceHash: studentHash(base) });
   });
-  return { records, issues };
+  return { records, issues, warnings };
 }
 
 export function validateCards(

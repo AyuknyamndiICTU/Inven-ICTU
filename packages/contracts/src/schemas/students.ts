@@ -46,8 +46,12 @@ export const CredentialDto = z
 export const StudentDetail = StudentListItem.extend({
   /** Contact fields are masked for LAB_ASSISTANT and VIEWER (ARCH §7). */
   email: z.string().nullable(),
+  personalEmail: z.string().nullable(),
   phone: z.string().nullable(),
   dateOfBirth: IsoDate.nullable(),
+  gender: z.string().nullable(),
+  nationality: z.string().nullable(),
+  section: z.string().nullable(),
   photoUrl: z.string().nullable(),
   hasPin: z.boolean(),
   pinLocked: z.boolean(),
@@ -60,6 +64,7 @@ export const StudentDetail = StudentListItem.extend({
 export const StudentListQuery = PageQuery.extend({
   search: z.string().trim().max(80).optional(),
   status: StudentStatus.optional(),
+  program: z.string().trim().max(80).optional(),
 });
 
 export const BindCardBody = z.object({ uid: z.string().regex(/^[0-9A-Fa-f]{8,20}$/) });
@@ -88,6 +93,11 @@ export const StudentField = z.enum([
   'status',
   'card_uid',
   'photo_url',
+  'full_name',
+  'personal_email',
+  'gender',
+  'nationality',
+  'section',
 ]);
 export const CardBatchField = z.enum(['card_uid', 'matricule', 'batch_id', 'printed_at']);
 

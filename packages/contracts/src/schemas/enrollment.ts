@@ -6,7 +6,8 @@ export const EnrollStartBody = z.object({
   matricule: Matricule,
   firstName: PersonName,
   lastName: PersonName,
-  dateOfBirth: IsoDate,
+  /** Optional: some school records (admissions lists) have no date of birth; when they do, it must match. */
+  dateOfBirth: IsoDate.optional(),
   platform: z.enum(['ANDROID_APP', 'WEB']),
 });
 export const EnrollStartResponse = z.object({
@@ -127,7 +128,12 @@ export const CredentialRequestDto = z
     createdAt: IsoDateTime,
     decidedAt: IsoDateTime.nullable(),
     decision: z.enum(['AUTO_APPROVED', 'PENDING', 'APPROVED', 'REJECTED']),
-    submitted: z.object({ matricule: z.string(), firstName: z.string(), lastName: z.string(), dateOfBirth: IsoDate }),
+    submitted: z.object({
+      matricule: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      dateOfBirth: IsoDate.nullable(),
+    }),
     matchResult: MatchResult,
     student: z.object({ id: Uuid, matricule: z.string(), firstName: z.string(), lastName: z.string() }).nullable(),
     credential: z.object({

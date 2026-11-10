@@ -177,7 +177,13 @@
     },
     "dev": {
       "title": "Lecteur simulé"
-    }
+    },
+    "locationLabel": "Où allez-vous l’utiliser ?",
+    "locationPlaceholder": "Choisissez une salle…",
+    "locationOther": "Autre lieu…",
+    "locationOtherLabel": "Indiquez le lieu",
+    "locationRequired": "Choisissez où vous utiliserez le matériel.",
+    "usedIn": "Pour {location}"
   },
   "admin": {
     "dashboard": {
@@ -197,7 +203,23 @@
       "noActivity": "Aucune activité pour l’instant.",
       "allGood": "Tous les articles sont au-dessus de leur seuil.",
       "noOverdue": "Aucun prêt en retard.",
-      "viewAll": "Tout voir"
+      "viewAll": "Tout voir",
+      "greetingMorning": "Bonjour, {name}",
+      "greetingAfternoon": "Bon après-midi, {name}",
+      "greetingEvening": "Bonsoir, {name}",
+      "overview": "Voici ce qui se passe au laboratoire Cisco aujourd’hui.",
+      "loansTrend": "Prêts — 14 derniers jours",
+      "busiestHours": "Heures de pointe",
+      "topItems": "Les plus empruntés",
+      "stockHealth": "État du stock",
+      "itemsTracked": "articles suivis",
+      "healthy": "En stock",
+      "vsPrevious": "par rapport aux 7 jours précédents",
+      "noLoansYet": "Aucun prêt sur cette période pour l’instant.",
+      "studentsPeriod": "{count} sur les 14 derniers jours",
+      "loansCount": "{count} prêts",
+      "quickActions": "Actions rapides",
+      "kioskFleet": "Parc de bornes"
     },
     "inventory": {
       "title": "Inventaire",
@@ -279,7 +301,9 @@
       "HCE": "Téléphone (NFC)",
       "SCAN": "Téléphone (scan)",
       "MANUAL": "Matricule",
-      "offline": "Hors ligne"
+      "offline": "Hors ligne",
+      "location": "Lieu",
+      "anyLocation": "Tous les lieux"
     },
     "students": {
       "title": "Étudiants",
@@ -318,7 +342,12 @@
       "empty": "Aucun étudiant. Importez d’abord la liste des étudiants.",
       "noCards": "Aucune carte liée.",
       "noCredentials": "Aucun pass téléphone.",
-      "synced": "Synchronisé {time}"
+      "synced": "Synchronisé {time}",
+      "personalEmail": "E-mail personnel",
+      "gender": "Genre",
+      "nationality": "Nationalité",
+      "section": "Section",
+      "allPrograms": "Toutes les filières"
     },
     "credentials": "Demandes d’identifiants",
     "alerts": {
@@ -412,7 +441,10 @@
       "general": "Règles de prêt",
       "language": "Langue",
       "overdueReminders": "Rappels de retard aux étudiants",
-      "off": "Désactivés"
+      "off": "Désactivés",
+      "locations": "Salles d’utilisation du matériel",
+      "locationsHint": "Une par ligne. L’étudiant en choisit une à la borne ; « Autre » est toujours proposé.",
+      "locationsSaved": "Salles enregistrées"
     },
     "kiosks": {
       "title": "Bornes",
@@ -466,7 +498,9 @@
       "loans": "Prêts",
       "units": "Unités",
       "export": "Exporter en CSV",
-      "totalLoans": "Total des prêts"
+      "totalLoans": "Total des prêts",
+      "byLocation": "Prêts par salle",
+      "notRecorded": "Non renseigné"
     },
     "addEquipment": "Ajouter du matériel",
     "adjustStock": "Ajuster le stock",
@@ -482,7 +516,13 @@
       "profile": "Mon profil",
       "live": "En direct",
       "reconnecting": "Reconnexion…",
-      "skip": "Aller au contenu"
+      "skip": "Aller au contenu",
+      "groupOverview": "Vue d’ensemble",
+      "groupOperations": "Opérations",
+      "groupAdmin": "Administration",
+      "menu": "Menu",
+      "notifications": "Notifications",
+      "pendingRequests": "{count} demandes en attente"
     },
     "nav": {
       "dashboard": "Tableau de bord",
@@ -736,6 +776,8 @@
     "version": "Version",
     "notPublished": "L’application Android n’est pas encore publiée. Utilisez l’application web en attendant.",
     "notifications": "Activer les rappels",
-    "notificationsOn": "Rappels activés"
+    "notificationsOn": "Rappels activés",
+    "usedIn": "Utilisé à {location}",
+    "dobOptional": "Date de naissance (si elle figure dans votre dossier)"
   }
 }

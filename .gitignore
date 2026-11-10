@@ -59,3 +59,17 @@ deploy/downloads/
 # Expo prebuild output (generated from app.json; never edited by hand)
 apps/mobile/android/
 apps/mobile/ios/
+
+# Kiosk installer resources (electron-builder buildResources)
+!apps/kiosk/build/
+apps/kiosk/build/*
+!apps/kiosk/build/icon.png
+
+# Student data exports (personal data, initial passwords) must never be committed
+*ADMISSIONS*.xlsx
+*ADMISSIONS*.csv
+/*.xlsx
+/*.csv
+
+# Gradle caches
+**/.gradle/

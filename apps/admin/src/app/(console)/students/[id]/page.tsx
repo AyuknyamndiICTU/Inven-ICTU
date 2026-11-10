@@ -98,8 +98,12 @@ export default function StudentPage({ params }: { params: Promise<{ id: string }
                   {[
                     [t('admin.students.program'), [s.program, s.level].filter(Boolean).join(' · ') || '—'],
                     [t('admin.students.email'), s.email ?? '—'],
+                    [t('admin.students.personalEmail'), s.personalEmail ?? '—'],
                     [t('admin.students.phoneNumber'), s.phone ?? '—'],
-                    [t('admin.students.dob'), s.dateOfBirth ? formatDate(s.dateOfBirth, locale) : '••••'],
+                    [t('admin.students.section'), s.section ?? '—'],
+                    [t('admin.students.gender'), s.gender ?? '—'],
+                    [t('admin.students.nationality'), s.nationality ?? '—'],
+                    [t('admin.students.dob'), s.dateOfBirth ? formatDate(s.dateOfBirth, locale) : '—'],
                     [
                       t('admin.students.pin'),
                       s.pinLocked

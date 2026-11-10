@@ -79,6 +79,15 @@ export class ReportsService {
         })
       ).map((k) => [k.id, k.name]),
     );
+    const lineIds = moves.map((m) => m.loanLineId).filter((x): x is string => Boolean(x));
+    const locations = new Map(
+      (
+        await this.prisma.loanLine.findMany({
+          where: { id: { in: lineIds } },
+          select: { id: true, loan: { select: { location: true } } },
+        })
+      ).map((l) => [l.id, l.loan.location]),
+    );
     const verb: Record<string, string> = {
       ISSUE: 'borrowed',
       RETURN: 'returned',
@@ -91,7 +100,10 @@ export class ReportsService {
     const items = [
       ...moves.map((m) => {
         const qty = Math.abs(m.delta || m.totalDelta);
-        const where = m.kioskId ? ` at ${kioskNames.get(m.kioskId) ?? 'a kiosk'}` : '';
+        const loc = m.loanLineId ? locations.get(m.loanLineId) : null;
+        const where =
+          (m.kioskId ? ` at ${kioskNames.get(m.kioskId) ?? 'a kiosk'}` : '') +
+          (m.type === 'ISSUE' && loc ? ` for ${loc}` : '');
         const kind = m.type === 'ISSUE' ? 'BORROW' : m.type === 'RETURN' || m.type === 'DAMAGED' ? 'RETURN' : 'ADJUST';
         return {
           id: m.id,
@@ -132,7 +144,7 @@ export class ReportsService {
     const { tz, start, end, days } = await this.range(from, to);
     const at = Prisma.sql`(COALESCE(l."occurredAt", l."openedAt") AT TIME ZONE 'UTC') AT TIME ZONE ${tz}`;
     const inRange = Prisma.sql`COALESCE(l."occurredAt", l."openedAt") >= ${start} AND COALESCE(l."occurredAt", l."openedAt") < ${end}`;
-    const [byItem, byDayRows, byHourRows, [unique]] = await Promise.all([
+    const [byItem, byDayRows, byHourRows, [unique], byLocation] = await Promise.all([
       this.prisma.$queryRaw<Array<{ equipmentId: string; name: string; loans: number; quantity: number }>>`
         SELECT ll."equipmentId", e.name, count(DISTINCT l.id)::int AS loans, sum(ll."qtyIssued")::int AS quantity
         FROM loans l JOIN loan_lines ll ON ll."loanId" = l.id JOIN equipment e ON e.id = ll."equipmentId"
@@ -144,6 +156,11 @@ export class ReportsService {
       this.prisma.$queryRaw<
         Array<{ n: number }>
       >`SELECT count(DISTINCT l."studentId")::int AS n FROM loans l WHERE ${inRange}`,
+      this.prisma.$queryRaw<Array<{ location: string; loans: number; quantity: number }>>`
+        SELECT COALESCE(l.location, 'Not recorded') AS location, count(DISTINCT l.id)::int AS loans,
+               sum(ll."qtyIssued")::int AS quantity
+        FROM loans l JOIN loan_lines ll ON ll."loanId" = l.id
+        WHERE ${inRange} GROUP BY 1 ORDER BY loans DESC, 1`,
     ]);
     const perDay = new Map(byDayRows.map((r) => [r.date, r.loans]));
     const perHour = new Map(byHourRows.map((r) => [r.hour, r.loans]));
@@ -157,6 +174,7 @@ export class ReportsService {
       byItem,
       byDay,
       byHour: Array.from({ length: 24 }, (_, hour) => ({ hour, loans: perHour.get(hour) ?? 0 })),
+      byLocation,
       uniqueStudents: unique?.n ?? 0,
     };
   }
@@ -169,6 +187,7 @@ export class ReportsService {
         ...r.byItem.map((i) => ['item', i.equipmentId, i.name, i.loans, i.quantity]),
         ...r.byDay.map((d) => ['day', d.date, '', d.loans, '']),
         ...r.byHour.map((h) => ['hour', String(h.hour).padStart(2, '0'), '', h.loans, '']),
+        ...r.byLocation.map((l) => ['location', l.location, l.location, l.loans, l.quantity]),
         ['total', 'unique_students', '', r.uniqueStudents, ''],
       ],
     );

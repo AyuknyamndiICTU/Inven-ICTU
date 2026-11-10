@@ -1,6 +1,21 @@
 import { z } from 'zod';
 
 const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'HH:MM');
+/** ICT University halls (lab request, Nov 2026). */
+export const DEFAULT_LOCATIONS = [
+  'Chumbow Hall',
+  'Eric Mbarika Hall',
+  'George Mbarika Hall',
+  'Terry & Linda Hall',
+  'IT Hall',
+  'French Hall 1',
+  'French Hall 2',
+  'Chapel Hall',
+  'Pondi Hall',
+  'Radio Station',
+  'Computer Lab',
+] as const;
+
 const Bilingual = z.object({ en: z.string().min(1).max(40), fr: z.string().min(1).max(40) });
 
 /** Typed system settings (ARCH §4 `Setting`). Defaults encode the Phase 0 decisions. */
@@ -25,6 +40,12 @@ export const Settings = z
       .default({ mode: 'LAB_CLOSING', labClosingTime: '18:00', hours: 4, timezone: 'Africa/Douala' }),
     /** Decision Q4: no limit (null). */
     maxItemsPerStudent: z.int().min(1).max(1000).nullable().default(null),
+    /** Halls where borrowed equipment may be used; the kiosk also offers "Other" with free text. */
+    lendingLocations: z
+      .array(z.string().trim().min(2).max(60))
+      .min(1)
+      .max(40)
+      .default([...DEFAULT_LOCATIONS]),
     /** Decision Q4: overdue students are blocked. */
     blockWhenOverdue: z.boolean().default(true),
     globalLowStockThreshold: z.int().min(0).max(100000).default(2),
@@ -69,6 +90,7 @@ export const KioskConfig = Settings.pick({
   cardAuthMode: true,
   offlineMaxHours: true,
   maxItemsPerStudent: true,
+  lendingLocations: true,
 }).meta({ id: 'KioskConfig' });
 export type KioskConfig = z.infer<typeof KioskConfig>;
 

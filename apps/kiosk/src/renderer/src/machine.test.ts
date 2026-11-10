@@ -40,6 +40,7 @@ const receipt = (kind: 'BORROW' | 'RETURN'): Receipt => ({
   occurredAt: new Date().toISOString(),
   dueAt: null,
   studentFirstName: 'Ama',
+  location: null,
   lines: [],
   offline: false,
 });
@@ -111,11 +112,16 @@ describe('kiosk flow machine', () => {
     k.actor.send({ type: 'ADD_ITEM', item });
     k.actor.send({ type: 'ADD_ITEM', item: { ...item, equipmentId: 'a2b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d' } });
     expect(k.ctx().cart.map((l) => l.qty)).toEqual([2, 1]);
+    k.actor.send({ type: 'SET_LOCATION', location: 'IT Hall' });
     k.actor.send({ type: 'CONFIRM' });
     expect(k.state()).toEqual({ session: 'confirming' });
     await k.flush();
     expect(k.state()).toBe('success');
-    expect(k.submit.mock.calls[0]![0]).toMatchObject({ kind: 'BORROW', lines: [{ quantity: 2 }, { quantity: 1 }] });
+    expect(k.submit.mock.calls[0]![0]).toMatchObject({
+      kind: 'BORROW',
+      location: 'IT Hall',
+      lines: [{ quantity: 2 }, { quantity: 1 }],
+    });
     await vi.advanceTimersByTimeAsync(7999);
     expect(k.state()).toBe('success');
     await vi.advanceTimersByTimeAsync(1);
@@ -123,10 +129,27 @@ describe('kiosk flow machine', () => {
     expect(k.ctx().student).toBeNull();
   });
 
+  it('a hall must be chosen before borrowing; "Back" clears it', () => {
+    const k = start();
+    k.actor.send({ type: 'IDENTIFY_RESULT', result: student() });
+    k.actor.send({ type: 'SIGN_IN' });
+    k.actor.send({ type: 'ADD_ITEM', item });
+    k.actor.send({ type: 'CONFIRM' });
+    expect(k.state()).toEqual({ session: 'borrowing' });
+    k.actor.send({ type: 'SET_LOCATION', location: '  ' });
+    k.actor.send({ type: 'CONFIRM' });
+    expect(k.state()).toEqual({ session: 'borrowing' });
+    k.actor.send({ type: 'SET_LOCATION', location: 'Chumbow Hall' });
+    expect(k.ctx().location).toBe('Chumbow Hall');
+    k.actor.send({ type: 'BACK' });
+    expect(k.ctx().location).toBeNull();
+  });
+
   it('cart quantities are clamped to availability; empty cart cannot confirm', () => {
     const k = start();
     k.actor.send({ type: 'IDENTIFY_RESULT', result: student() });
     k.actor.send({ type: 'SIGN_IN' });
+    k.actor.send({ type: 'SET_LOCATION', location: 'IT Hall' });
     k.actor.send({ type: 'CONFIRM' });
     expect(k.state()).toEqual({ session: 'borrowing' });
     k.actor.send({ type: 'ADD_ITEM', item });
@@ -146,6 +169,7 @@ describe('kiosk flow machine', () => {
     const k = start();
     k.actor.send({ type: 'IDENTIFY_RESULT', result: student() });
     k.actor.send({ type: 'SIGN_OUT' });
+    k.actor.send({ type: 'SET_LOCATION', location: 'IT Hall' });
     k.actor.send({ type: 'CONFIRM' });
     expect(k.state()).toEqual({ session: 'returning' });
     k.actor.send({
@@ -155,6 +179,7 @@ describe('kiosk flow machine', () => {
       condition: 'DAMAGED',
     });
     k.actor.send({ type: 'SET_RETURN', loanLineId: 'zz', qty: 0, condition: 'OK' });
+    k.actor.send({ type: 'SET_LOCATION', location: 'IT Hall' });
     k.actor.send({ type: 'CONFIRM' });
     await k.flush();
     expect(k.submit.mock.calls[0]![0]).toMatchObject({
@@ -209,6 +234,7 @@ describe('kiosk flow machine', () => {
     k.actor.send({ type: 'SIGN_IN' });
     k.actor.send({ type: 'ADD_ITEM', item });
     k.actor.send({ type: 'SET_QTY', equipmentId: item.equipmentId, qty: 3 });
+    k.actor.send({ type: 'SET_LOCATION', location: 'IT Hall' });
     k.actor.send({ type: 'CONFIRM' });
     await k.flush();
     expect(k.state()).toEqual({ session: 'borrowing' });
@@ -230,6 +256,7 @@ describe('kiosk flow machine', () => {
     k.actor.send({ type: 'IDENTIFY_RESULT', result: student() });
     k.actor.send({ type: 'SIGN_IN' });
     k.actor.send({ type: 'ADD_ITEM', item });
+    k.actor.send({ type: 'SET_LOCATION', location: 'IT Hall' });
     k.actor.send({ type: 'CONFIRM' });
     await k.flush();
     expect(k.state()).toBe('error');
@@ -355,6 +382,7 @@ describe('kiosk flow machine', () => {
     k.actor.send({ type: 'IDENTIFY_RESULT', result: student() });
     k.actor.send({ type: 'SIGN_IN' });
     k.actor.send({ type: 'ADD_ITEM', item });
+    k.actor.send({ type: 'SET_LOCATION', location: 'IT Hall' });
     k.actor.send({ type: 'CONFIRM' });
     k.actor.send({ type: 'TAP_PRESENT' });
     expect(k.state()).toEqual({ session: 'confirming' });

@@ -146,7 +146,7 @@ export class SoftAuthenticator {
 /** Full Android enrollment for a matching student; returns the phone and its tokens. */
 export async function enrollAndroid(
   t: TestApp,
-  student: { matricule: string; firstName: string; lastName: string; dateOfBirth: Date },
+  student: { matricule: string; firstName: string; lastName: string; dateOfBirth: Date | null },
 ) {
   const start = await t.request({
     method: 'POST',
@@ -156,7 +156,7 @@ export async function enrollAndroid(
       matricule: student.matricule,
       firstName: student.firstName,
       lastName: student.lastName,
-      dateOfBirth: student.dateOfBirth.toISOString().slice(0, 10),
+      ...(student.dateOfBirth ? { dateOfBirth: student.dateOfBirth.toISOString().slice(0, 10) } : {}),
       platform: 'ANDROID_APP',
     },
   });

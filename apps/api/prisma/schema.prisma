@@ -199,8 +199,15 @@ model Student {
   firstName     String
   lastName      String
   email         String?
+  /// Personal email (registrar files list the ICT-U address and a personal one).
+  personalEmail String?
   phone         String?
-  dateOfBirth   DateTime      @db.Date
+  /// Optional: some registrar exports (e.g. admissions lists) carry no date of birth.
+  dateOfBirth   DateTime?     @db.Date
+  gender        String?
+  nationality   String?
+  /// Teaching language stream (English / French).
+  section       String?
   program       String?
   level         String?
   status        StudentStatus @default(ACTIVE)
@@ -485,6 +492,8 @@ model Loan {
   occurredAt         DateTime?
   dueAt              DateTime
   closedAt           DateTime?
+  /// Where the equipment is used (a hall from settings.lendingLocations, or free text for "Other").
+  location           String?
   status             LoanStatus          @default(OPEN)
   overdueNotifiedAt  DateTime?
   student            Student             @relation(fields: [studentId], references: [id])
@@ -492,6 +501,7 @@ model Loan {
 
   @@index([status, dueAt])
   @@index([studentId, status])
+  @@index([location])
   @@map("loans")
 }
 
